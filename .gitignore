@@ -1,0 +1,8 @@
+bin
+obj
+publish
+
+# Rid1er
+.idea
+
+*.DotSettings
