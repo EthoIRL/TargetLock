@@ -200,7 +200,7 @@ class Program
 
             var nearest = validBoxes.First();
 
-            var centerX = nearest.X + nearest.Width / 2;
+            var centerX = (int) Math.Ceiling(nearest.X + nearest.Width / 2.0);
             var lowestY = nearest.Y + nearest.Height;
 
             var deltaX = centerX - CenterMouseX;
