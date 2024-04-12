@@ -5,6 +5,7 @@ namespace TargetLock;
 public class Prediction
 {
     public readonly CircularBuffer<(int x, int y)> MouseStates = new(20);
+    private bool _hasMouseStates;
 
     private readonly double _correction;
 
@@ -15,44 +16,54 @@ public class Prediction
 
     public (int deltaX, int deltaY) HandlePredictions(int deltaX, int deltaY)
     {
-        var count = MouseStates.Count();
-        if (count >= 20)
+        if (!_hasMouseStates)
         {
-            if (MouseStates[0].x == deltaX && MouseStates[1].x == deltaX && MouseStates[2].x == deltaX)
+            var count = MouseStates.Count();
+            if (count >= 20)
             {
-                var good = true;
-                for (int i = 3; i < 20; i++)
-                {
-                    if (MouseStates[i].x == -deltaX)
-                    {
-                        good = false;
-                    }
-                }
+                _hasMouseStates = true;
+            }
+        }
 
-                if (good)
+        if (_hasMouseStates)
+        {
+            var xArray = MouseStates.Select(x => x.Item1).ToArray();
+            var yArray = MouseStates.Select(y => y.Item2).ToArray();
+
+            if (deltaX == 0)
+            {
+                if (Math.Abs(xArray[1]) == 1 && xArray[2] == xArray[1])
                 {
-                    deltaX = (int) Math.Floor(deltaX * _correction);
+                    Console.WriteLine($"Smoothness fix {xArray[1]}");
+                    deltaX = xArray[1];
                 }
             }
 
-            if (MouseStates[0].y == deltaY && MouseStates[1].y == deltaY && MouseStates[2].y == deltaY)
+            if (SameValue(xArray, 3, deltaX))
             {
-                var good = true;
-                for (int i = 2; i < 20; i++)
-                {
-                    if (MouseStates[i].y == -deltaY)
-                    {
-                        good = false;
-                    }
-                }
+                deltaX = (int) Math.Floor(deltaX * _correction);
+            }
 
-                if (good)
-                {
-                    deltaY = (int) Math.Floor(deltaY * _correction);
-                }
+            if (SameValue(yArray, 3, deltaY))
+            {
+                deltaY = (int) Math.Floor(deltaY * _correction);
             }
         }
 
         return (deltaX, deltaY);
+    }
+
+
+    private bool SameValue(int[] values, int length, int value, int offset = 0)
+    {
+        for (int i = offset; i < length; i++)
+        {
+            if (values[i] != value)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

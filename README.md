@@ -10,7 +10,7 @@ General purpose color aimbot (with the intent for BattleBit Remastered). Meant t
 * Custom fov
 * Slowdown (Makes snapping less obvious; but maintains speed when on target)
 * Smoothing (Slowdown but all the time)
-* Basic Prediction
+* Basic Prediction (Motion acceleration)
 
 ## Known issues
 * .NET causing high latency per image calculation during the first few minutes of startup (R2R is being used however it still seems to be an issue).
