@@ -7,12 +7,12 @@ public class Prediction
     public readonly CircularBuffer<(int x, int y)> MouseStates = new(20);
 
     private readonly double _correction;
-    
+
     public Prediction(double correction)
     {
         _correction = correction;
     }
-    
+
     public (int deltaX, int deltaY) HandlePredictions(int deltaX, int deltaY)
     {
         var count = MouseStates.Count();
@@ -28,13 +28,13 @@ public class Prediction
                         good = false;
                     }
                 }
-                    
+
                 if (good)
                 {
                     deltaX = (int) Math.Floor(deltaX * _correction);
                 }
             }
-                
+
             if (MouseStates[0].y == deltaY && MouseStates[1].y == deltaY && MouseStates[2].y == deltaY)
             {
                 var good = true;
@@ -45,7 +45,7 @@ public class Prediction
                         good = false;
                     }
                 }
-                    
+
                 if (good)
                 {
                     deltaY = (int) Math.Floor(deltaY * _correction);

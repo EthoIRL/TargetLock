@@ -50,7 +50,7 @@ class Program
     private const int BlueMinimum = 230;
 
     private const int BlueThreshold = 175;
-    
+
     private static readonly Prediction Predictor = new(1.2);
 
     private static readonly Mat? Kernel = CvInvoke.GetStructuringElement(ElementShape.Rectangle, new Size(2, 2), new Point(-1, -1));
@@ -257,7 +257,6 @@ class Program
 
             Predictor.MouseStates.PushFront((deltaX, deltaY));
 
-
             var xDifference = predictions.deltaX - deltaX;
             var yDifference = predictions.deltaY - deltaY;
             if (xDifference != 0)
@@ -269,7 +268,7 @@ class Program
             {
                 Console.WriteLine($"Y: {deltaY}, Prediction: {predictions.deltaY}, Diff: {Math.Abs(yDifference)}");
             }
-            
+
             deltaX = predictions.deltaX;
             deltaY = predictions.deltaY;
 
@@ -298,7 +297,7 @@ class Program
         if (WaitForNewFrame)
         {
             var delayedSleep = FpsInTicks - ScreenshotSync - ImageComputation.ElapsedTicks - 50;
-            
+
             if (delayedSleep > 0)
             {
                 Waiter.Restart();

@@ -15,7 +15,7 @@ using Resource = SharpDX.DXGI.Resource;
 namespace TargetLock;
 
 #pragma warning disable CA1416
-public class ScreenCapturer
+public static class ScreenCapturer
 {
     private static readonly Stopwatch ScWatch = new();
     private static readonly List<long> Timings = new();
@@ -56,18 +56,18 @@ public class ScreenCapturer
         using OutputDuplication outputDuplication = output1.DuplicateOutput(device);
 
         DataBox dataBox = device.ImmediateContext.MapSubresource(texture2D, 0, MapMode.Read, MapFlags.None);
-        
+
         ResourceRegion resourceRegion = new ResourceRegion(centerWidth, centerHeight, 0, width, height, 1);
-        
+
         bool previousState = false;
-        
+
         Image<Bgra, byte> dest = new Image<Bgra, byte>(outputWidth, outputHeight);
 
         GCHandle pinnedArray = GCHandle.Alloc(dest.Data, GCHandleType.Pinned);
         IntPtr dataPointer = pinnedArray.AddrOfPinnedObject();
 
         var heightPartitioner = Partitioner.Create(0, outputHeight);
-        
+
         while (true)
         {
             ScWatch.Restart();
@@ -76,10 +76,10 @@ public class ScreenCapturer
             {
                 outputDuplication.ReleaseFrame();
             }
-            
+
             var status = outputDuplication.TryAcquireNextFrame(0, out var data, out var screenResource);
             previousState = status.Success;
-            
+
             if (screenResource == null || data.LastPresentTime == 0)
             {
                 continue;
@@ -97,13 +97,13 @@ public class ScreenCapturer
                     Utilities.CopyMemory(currentBitmapDataPointer, currentDataBoxPointer, outputWidth * 4);
                 }
             });
-            
+
             Program.LocalImage.Data = dest.Data;
             Program.ScreenshotSync = ScWatch.ElapsedTicks;
 
             screenTexture2D.Dispose();
             screenResource.Dispose();
-            
+
             Program.HandleImage();
             ScWatch.Stop();
 
