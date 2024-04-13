@@ -90,7 +90,7 @@ class Program
             {
                 while (true)
                 {
-                    if (LocalImage is {Data: { }} && _originalView is {Data: { }})
+                    if (_originalView is {Data: { }})
                     {
                         CvInvoke.Imshow("Original View", _originalView);
                         CvInvoke.WaitKey(1);
@@ -268,11 +268,6 @@ class Program
 
                 deltaX = predictions.deltaX;
                 deltaY = predictions.deltaY;
-            }
-
-            if (deltaX == 0 && deltaY == 0 && !leftFire)
-            {
-                return;
             }
 
             var data = PreparePacket((short) deltaX, (short) deltaY, false, leftFire);
