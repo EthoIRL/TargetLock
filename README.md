@@ -34,4 +34,12 @@ dotnet publish -c Release -o publish
 # Game Configuration
 * Change ``Enemy Color`` to ``(0, 0, 255)`` (BLUE) in Gameplay -> Enemy Color.
 * Change ``Enemy Icon Size`` to ``4.0`` in Gameplay -> Enemy Color (This is below Friendly Color & Icon size; blame BattleBit).
-* Anti aliasing may cause movement jitter feel free to experiment. 
+* Anti aliasing may cause movement jitter feel free to experiment.
+
+# Requirements
+* Windows 10 (11 is untested)
+* Dedicated GPU (Integrated untested)
+
+# Dependencies
+* SharpDX & DXGI Api (Outdated however still functions rather well in .NET 8)
+* Emgu.CV
