@@ -1,9 +1,8 @@
 ﻿## Target Lock
 General purpose color aimbot (with the intent for BattleBit Remastered). Meant to be used in conjunction with [**Helious**](https://github.com/StrateimTech/Helious) for remote mouse movement injection.
 
-* Optimized for high performance/low latency calculations (~0.4ms / all calculations, Please note that this took up to ~3% gpu utilization on a 3060 Ti, it is CPU bound the entire time).
-* Prioritize performance throughput & latency at the expense of (high cpu usage).
-* Debug window (OpenCV / EmguCV, **WILL** decrease performance due to it's waitkey requirements).
+* Optimized for low latency calculations (~0.2ms / all calculations, Please note that this took up to ~3% gpu utilization on a 3060 Ti).
+* Debug window (OpenCV / EmguCV, **WILL** decrease performance due to it's  requirements).
 
 ## Basic Features
 * Auto fire
@@ -39,6 +38,8 @@ dotnet publish -c Release -o publish
 # Requirements
 * Windows 10 (11 is untested)
 * Dedicated GPU (Integrated untested)
+* Modified (High Performance UDP Server module) [Helious](https://github.com/StrateimTech/Helious) instance running a RPI4 or RPI5 connected via LAN.
+* .NET 8
 
 # Dependencies
 * SharpDX & DXGI Api (Outdated however still functions rather well in .NET 8)
