@@ -154,7 +154,6 @@ class Program
         CvInvoke.MorphologyEx(LocalImage, LocalImage, MorphOp.Dilate, Kernel, new Point(-1, -1), 2, BorderType.Replicate, new MCvScalar(255, 255, 255));
 
         CvInvoke.FindContours(LocalImage, Contours, Output, RetrType.External, ChainApproxMethod.ChainApproxNone);
-
         var contourArray = Contours.ToArrayOfArray();
         List<Rectangle> boundingBoxes = new List<Rectangle>(contourArray.Length);
 
@@ -252,21 +251,21 @@ class Program
             if (UsePrediction)
             {
                 var predictions = Predictor.HandlePredictions(deltaX, deltaY);
-                
+
                 Predictor.MouseStates.PushFront((deltaX, deltaY));
-            
+
                 var xDifference = predictions.deltaX - deltaX;
                 var yDifference = predictions.deltaY - deltaY;
                 if (xDifference != 0)
                 {
                     Console.WriteLine($"X: {deltaX}, Prediction: {predictions.deltaX}, Diff: {Math.Abs(xDifference)}");
                 }
-            
+
                 if (yDifference != 0)
                 {
                     Console.WriteLine($"Y: {deltaY}, Prediction: {predictions.deltaY}, Diff: {Math.Abs(yDifference)}");
                 }
-            
+
                 deltaX = predictions.deltaX;
                 deltaY = predictions.deltaY;
             }
@@ -275,7 +274,7 @@ class Program
             {
                 return;
             }
-            
+
             var data = PreparePacket((short) deltaX, (short) deltaY, false, leftFire);
 
             Socket.Send(data);
