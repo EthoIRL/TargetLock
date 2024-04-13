@@ -74,6 +74,9 @@ class Program
     public static double ScreenshotSync;
 
     public static readonly Image<Bgra, byte> LocalImage = new(Resolution.width, Resolution.height);
+    public static IntPtr LocalImageDataPtr;
+    private static readonly Image<Gray, byte> GrayImage = new(Resolution.width, Resolution.height);
+    
     private static Image<Bgra, byte> _originalView = new(Resolution.width, Resolution.height);
 
     private static readonly Stopwatch Waiter = new();
@@ -117,43 +120,40 @@ class Program
         {
             Parallel.ForEach(RangePartitioner, range =>
             {
-                fixed (byte* pData = LocalImage.Data)
+                for (int y = range.Item1; y < range.Item2; y++)
                 {
-                    for (int y = range.Item1; y < range.Item2; y++)
+                    byte* currentLine = (byte*) (LocalImageDataPtr + y * LocalImage.MIplImage.WidthStep);
+
+                    for (int x = 0; x < StridePixels; x += 4)
                     {
-                        byte* currentLine = (byte*) ((IntPtr) pData + y * LocalImage.MIplImage.WidthStep);
+                        byte red = currentLine[x + 2];
+                        byte green = currentLine[x + 1];
+                        byte blue = currentLine[x];
 
-                        for (int x = 0; x < StridePixels; x += 4)
+                        bool isBlue = green <= GreenTolerance && red <= RedTolerance && blue >= BlueMinimum || blue - green > BlueThreshold && blue - red > BlueThreshold;
+
+                        if (isBlue)
                         {
-                            byte red = currentLine[x + 2];
-                            byte green = currentLine[x + 1];
-                            byte blue = currentLine[x];
-
-                            bool isBlue = green <= GreenTolerance && red <= RedTolerance && blue >= BlueMinimum || blue - green > BlueThreshold && blue - red > BlueThreshold;
-
-                            if (isBlue)
-                            {
-                                currentLine[x + 2] = 255;
-                                currentLine[x + 1] = 255;
-                                currentLine[x + 0] = 255;
-                            }
-                            else
-                            {
-                                currentLine[x + 2] = 0;
-                                currentLine[x + 1] = 0;
-                                currentLine[x + 0] = 0;
-                            }
+                            currentLine[x + 2] = 255;
+                            currentLine[x + 1] = 255;
+                            currentLine[x + 0] = 255;
+                        }
+                        else
+                        {
+                            currentLine[x + 2] = 0;
+                            currentLine[x + 1] = 0;
+                            currentLine[x + 0] = 0;
                         }
                     }
                 }
             });
         }
 
-        CvInvoke.CvtColor(LocalImage, LocalImage, ColorConversion.Bgr2Gray);
+        CvInvoke.CvtColor(LocalImage, GrayImage, ColorConversion.Bgr2Gray);
 
-        CvInvoke.MorphologyEx(LocalImage, LocalImage, MorphOp.Dilate, Kernel, new Point(-1, -1), 2, BorderType.Replicate, new MCvScalar(255, 255, 255));
+        CvInvoke.MorphologyEx(GrayImage, GrayImage, MorphOp.Dilate, Kernel, new Point(-1, -1), 2, BorderType.Replicate, new MCvScalar(255, 255, 255));
 
-        CvInvoke.FindContours(LocalImage, Contours, Output, RetrType.External, ChainApproxMethod.ChainApproxNone);
+        CvInvoke.FindContours(GrayImage, Contours, Output, RetrType.External, ChainApproxMethod.ChainApproxNone);
         var contourArray = Contours.ToArrayOfArray();
         List<Rectangle> boundingBoxes = new List<Rectangle>(contourArray.Length);
 
@@ -284,7 +284,6 @@ class Program
             }
         }
 
-        LocalImage.Dispose();
         if (originalImage != null)
         {
             _originalView = originalImage;

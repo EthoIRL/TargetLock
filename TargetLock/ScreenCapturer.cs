@@ -59,14 +59,13 @@ public static class ScreenCapturer
 
         ResourceRegion resourceRegion = new ResourceRegion(centerWidth, centerHeight, 0, width, height, 1);
 
-        bool previousState = false;
-
-        Image<Bgra, byte> dest = new Image<Bgra, byte>(outputWidth, outputHeight);
-
-        GCHandle pinnedArray = GCHandle.Alloc(dest.Data, GCHandleType.Pinned);
-        IntPtr dataPointer = pinnedArray.AddrOfPinnedObject();
-
+        GCHandle pinnedArray = GCHandle.Alloc(Program.LocalImage.Data, GCHandleType.Pinned);
+        Program.LocalImageDataPtr = pinnedArray.AddrOfPinnedObject();
+        
         var heightPartitioner = Partitioner.Create(0, outputHeight);
+        
+        int widthStep = Program.LocalImage.MIplImage.WidthStep;
+        bool previousState = false;
 
         while (true)
         {
@@ -93,17 +92,15 @@ public static class ScreenCapturer
                 for (int y = range.Item1; y < range.Item2; y++)
                 {
                     IntPtr currentDataBoxPointer = IntPtr.Add(dataBox.DataPointer, y * dataBox.RowPitch);
-                    IntPtr currentBitmapDataPointer = IntPtr.Add(dataPointer, y * dest.MIplImage.WidthStep);
+                    IntPtr currentBitmapDataPointer = IntPtr.Add(Program.LocalImageDataPtr, y * widthStep);
                     Utilities.CopyMemory(currentBitmapDataPointer, currentDataBoxPointer, outputWidth * 4);
                 }
             });
 
-            Program.LocalImage.Data = dest.Data;
-            Program.ScreenshotSync = ScWatch.ElapsedTicks;
-
             screenTexture2D.Dispose();
             screenResource.Dispose();
 
+            Program.ScreenshotSync = ScWatch.ElapsedTicks;
             Program.HandleImage();
             ScWatch.Stop();
 
@@ -114,7 +111,7 @@ public static class ScreenCapturer
 
             if (Timings.Count != 0 && Timings.Count % 100 == 0)
             {
-                Console.WriteLine($"Timings SC Avg: {Timings.Average() / 10000.0}");
+                Console.WriteLine($"Timings SC Avg: ({Timings.Average() / 10000.0}, {Timings.Count})");
             }
         }
     }
