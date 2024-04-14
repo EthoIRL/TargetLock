@@ -30,22 +30,6 @@ public class Prediction
             var xArray = MouseStates.Select(x => x.Item1).ToArray();
             var yArray = MouseStates.Select(y => y.Item2).ToArray();
 
-            if (deltaX == 0)
-            {
-                if (Math.Abs(xArray[1]) == 1 && xArray[2] == xArray[1])
-                {
-                    deltaX = xArray[1];
-                }
-            }
-            
-            if (deltaY == 0)
-            {
-                if (Math.Abs(yArray[1]) == 1 && yArray[2] == yArray[1])
-                {
-                    deltaY = yArray[1];
-                }
-            }
-
             if (SameValue(xArray, 3, deltaX))
             {
                 deltaX = (int) Math.Floor(deltaX * _correction);
