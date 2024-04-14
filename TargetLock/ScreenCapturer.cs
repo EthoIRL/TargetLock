@@ -1,16 +1,11 @@
 ﻿using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Drawing;
 using System.Runtime.InteropServices;
-using Emgu.CV;
-using Emgu.CV.CvEnum;
-using Emgu.CV.Structure;
 using SharpDX;
 using SharpDX.Direct3D11;
 using SharpDX.DXGI;
 using Device = SharpDX.Direct3D11.Device;
 using MapFlags = SharpDX.Direct3D11.MapFlags;
-using Resource = SharpDX.DXGI.Resource;
 
 namespace TargetLock;
 
