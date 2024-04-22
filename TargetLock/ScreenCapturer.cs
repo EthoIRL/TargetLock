@@ -52,7 +52,7 @@ public static class ScreenCapturer
 
         DataBox dataBox = device.ImmediateContext.MapSubresource(texture2D, 0, MapMode.Read, MapFlags.None);
 
-        ResourceRegion resourceRegion = new ResourceRegion(centerWidth, centerHeight, 0, width, height, 1);
+        ResourceRegion resourceRegion = new ResourceRegion(centerWidth, centerHeight, 0, centerWidth + outputWidth/2, centerHeight + outputHeight/2, 1);
 
         GCHandle pinnedArray = GCHandle.Alloc(Program.LocalImage.Data, GCHandleType.Pinned);
         Program.LocalImageDataPtr = pinnedArray.AddrOfPinnedObject();
