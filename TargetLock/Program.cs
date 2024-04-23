@@ -135,7 +135,7 @@ class Program
                         {
                             if (!compute)
                             {
-                                compute = false;
+                                compute = true;
                             }
                             
                             currentLine[x + 2] = 255;
@@ -153,7 +153,7 @@ class Program
             });
         }
 
-        if (compute || ShowDebug)
+        if (compute)
         {
             CvInvoke.CvtColor(LocalImage, GrayImage, ColorConversion.Bgr2Gray);
             CvInvoke.MorphologyEx(GrayImage, GrayImage, MorphOp.Dilate, Kernel, new Point(-1, -1), 2, BorderType.Replicate, new MCvScalar(255, 255, 255));
