@@ -114,6 +114,7 @@ class Program
             originalImage = LocalImage.Resize(WindowResolution.width, WindowResolution.height, WindowResolution.method);
         }
 
+        bool compute = false;
         unsafe
         {
             Parallel.ForEach(RangePartitioner, range =>
@@ -132,6 +133,11 @@ class Program
 
                         if (isBlue)
                         {
+                            if (!compute)
+                            {
+                                compute = false;
+                            }
+                            
                             currentLine[x + 2] = 255;
                             currentLine[x + 1] = 255;
                             currentLine[x + 0] = 255;
@@ -147,12 +153,14 @@ class Program
             });
         }
 
-        CvInvoke.CvtColor(LocalImage, GrayImage, ColorConversion.Bgr2Gray);
+        if (compute || ShowDebug)
+        {
+            CvInvoke.CvtColor(LocalImage, GrayImage, ColorConversion.Bgr2Gray);
+            CvInvoke.MorphologyEx(GrayImage, GrayImage, MorphOp.Dilate, Kernel, new Point(-1, -1), 2, BorderType.Replicate, new MCvScalar(255, 255, 255));
+            CvInvoke.FindContours(GrayImage, Contours, Output, RetrType.External, ChainApproxMethod.ChainApproxNone);
+        }
 
-        CvInvoke.MorphologyEx(GrayImage, GrayImage, MorphOp.Dilate, Kernel, new Point(-1, -1), 2, BorderType.Replicate, new MCvScalar(255, 255, 255));
-
-        CvInvoke.FindContours(GrayImage, Contours, Output, RetrType.External, ChainApproxMethod.ChainApproxNone);
-        if (Contours.Length != 0)
+        if (Contours.Length != 0 && compute)
         {
             var contourArray = Contours.ToArrayOfArray();
             Rectangle[] boundingBoxes = new Rectangle[contourArray.Length];
