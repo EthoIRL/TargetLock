@@ -252,24 +252,11 @@ class Program
 
                 Predictor.MouseStates.PushFront((deltaX, deltaY));
 
-                var xDifference = predictions.deltaX - deltaX;
-                var yDifference = predictions.deltaY - deltaY;
-                if (xDifference != 0)
-                {
-                    Console.WriteLine($"X: {deltaX}, Prediction: {predictions.deltaX}, Diff: {Math.Abs(xDifference)}");
-                }
-
-                if (yDifference != 0)
-                {
-                    Console.WriteLine($"Y: {deltaY}, Prediction: {predictions.deltaY}, Diff: {Math.Abs(yDifference)}");
-                }
-
                 deltaX = predictions.deltaX;
                 deltaY = predictions.deltaY;
             }
 
             var data = PreparePacket((short) deltaX, (short) deltaY, false, leftFire);
-
             Socket.Send(data);
         }
         else
