@@ -93,6 +93,7 @@ class Program
                     if (_originalView is {Data: { }})
                     {
                         CvInvoke.Imshow("Original View", _originalView);
+                        CvInvoke.Imshow("Filtered View", GrayImage);
                         CvInvoke.WaitKey(1);
                     }
                 }
