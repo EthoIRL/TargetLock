@@ -17,7 +17,7 @@ namespace TargetLock;
 class Program
 {
     // (500, 300)
-    private static readonly (int width, int height) Resolution = (500, 300);
+    private static readonly (int width, int height) Resolution = (300, 300);
 
     private static readonly (int width, int height, Inter method) WindowResolution = new(896, 504, Inter.Nearest);
 
@@ -30,7 +30,7 @@ class Program
     private static readonly bool WaitForNewFrame = false;
 
     private static readonly int Fps = 200;
-    private static readonly double FpsInTicks = (1000.0 / (Fps / 2.0)) * 10000.0;
+    private static readonly double FpsInTicks = (1000.0 / Fps) * 10000.0;
 
     private static readonly bool Slowdown = false;
     private static readonly int SlowRadius = 50;
@@ -49,7 +49,7 @@ class Program
     private const int BlueThreshold = 175;
 
     private static readonly bool UsePrediction = true;
-    private static readonly Prediction Predictor = new(2);
+    private static readonly Prediction Predictor = new(1.4);
 
     private static readonly Mat? Kernel = CvInvoke.GetStructuringElement(ElementShape.Rectangle, new Size(2, 2), new Point(-1, -1));
 
