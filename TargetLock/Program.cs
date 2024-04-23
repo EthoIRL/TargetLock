@@ -73,7 +73,7 @@ class Program
     public static readonly Image<Bgra, byte> LocalImage = new(Resolution.width, Resolution.height);
     public static IntPtr LocalImageDataPtr;
     private static readonly Image<Gray, byte> GrayImage = new(Resolution.width, Resolution.height);
-    
+
     private static Image<Bgra, byte> _originalView = new(Resolution.width, Resolution.height);
 
     private static readonly Stopwatch Waiter = new();
@@ -152,18 +152,16 @@ class Program
         CvInvoke.MorphologyEx(GrayImage, GrayImage, MorphOp.Dilate, Kernel, new Point(-1, -1), 2, BorderType.Replicate, new MCvScalar(255, 255, 255));
 
         CvInvoke.FindContours(GrayImage, Contours, Output, RetrType.External, ChainApproxMethod.ChainApproxNone);
-        var contourArray = Contours.ToArrayOfArray();
-        List<Rectangle> boundingBoxes = new List<Rectangle>(contourArray.Length);
-
-        foreach (var contour in contourArray)
+        if (Contours.Length != 0)
         {
-            Rectangle rect = CvInvoke.BoundingRectangle(contour);
+            var contourArray = Contours.ToArrayOfArray();
+            Rectangle[] boundingBoxes = new Rectangle[contourArray.Length];
 
-            boundingBoxes.Add(rect);
-        }
+            for (int i = 0; i < contourArray.Length; i++)
+            {
+                boundingBoxes[i] = CvInvoke.BoundingRectangle(contourArray[i]);
+            }
 
-        if (boundingBoxes.Count > 0)
-        {
             if (ShowDebug)
             {
                 foreach (var rect in boundingBoxes)
@@ -193,9 +191,9 @@ class Program
                 var sizeRatio = rect.Height / (double) rect.Width;
 
                 return sizeRatio - 1;
-            }).ToList();
+            }).ToArray();
 
-            var nearest = validBoxes.First();
+            var nearest = validBoxes[0];
 
             var centerX = (int) Math.Ceiling(nearest.X + nearest.Width / 2.0);
             var lowestY = nearest.Y + nearest.Height;
@@ -233,7 +231,7 @@ class Program
                     var trueDeltaX = centerX - CenterMouseX;
                     var trueDeltaY = lowestY - CenterMouseY;
 
-                    if (Math.Abs(trueDeltaY) < 5 && Math.Abs(trueDeltaX) < 2)
+                    if (Math.Abs(trueDeltaY) < 4 && Math.Abs(trueDeltaX) < 1)
                     {
                         leftFire = true;
                         _lastSentLeft = true;
@@ -263,7 +261,7 @@ class Program
         {
             if (_lastSentLeft)
             {
-                var data = PreparePacket(0, 0);
+                var data = PreparePacket(0, 0, false, false);
                 Socket.Send(data);
                 _lastSentLeft = false;
             }
