@@ -52,7 +52,7 @@ public static class ScreenCapturer
 
         DataBox dataBox = device.ImmediateContext.MapSubresource(texture2D, 0, MapMode.Read, MapFlags.None);
 
-        ResourceRegion resourceRegion = new ResourceRegion(centerWidth, centerHeight, 0, centerWidth + outputWidth/2, centerHeight + outputHeight/2, 1);
+        ResourceRegion resourceRegion = new ResourceRegion(centerWidth, centerHeight, 0, centerWidth + outputWidth, centerHeight + outputHeight, 1);
 
         GCHandle pinnedArray = GCHandle.Alloc(Program.LocalImage.Data, GCHandleType.Pinned);
         Program.LocalImageDataPtr = pinnedArray.AddrOfPinnedObject();
@@ -61,6 +61,8 @@ public static class ScreenCapturer
         
         int widthStep = Program.LocalImage.MIplImage.WidthStep;
         bool previousState = false;
+        
+        int bytesPerPixel = outputWidth * 4;
 
         while (true)
         {
@@ -88,7 +90,7 @@ public static class ScreenCapturer
                 {
                     IntPtr currentDataBoxPointer = IntPtr.Add(dataBox.DataPointer, y * dataBox.RowPitch);
                     IntPtr currentBitmapDataPointer = IntPtr.Add(Program.LocalImageDataPtr, y * widthStep);
-                    Utilities.CopyMemory(currentBitmapDataPointer, currentDataBoxPointer, outputWidth * 4);
+                    Utilities.CopyMemory(currentBitmapDataPointer, currentDataBoxPointer, bytesPerPixel);
                 }
             });
 
