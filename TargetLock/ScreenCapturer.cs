@@ -88,9 +88,10 @@ public static class ScreenCapturer
             {
                 for (int y = range.Item1; y < range.Item2; y++)
                 {
-                    IntPtr currentDataBoxPointer = IntPtr.Add(dataBox.DataPointer, y * dataBox.RowPitch);
-                    IntPtr currentBitmapDataPointer = IntPtr.Add(Program.LocalImageDataPtr, y * widthStep);
-                    Utilities.CopyMemory(currentBitmapDataPointer, currentDataBoxPointer, bytesPerPixel);
+                    var dataBoxPointerOffset = dataBox.DataPointer + (y * dataBox.RowPitch);
+                    var imagePointerOffset = Program.LocalImageDataPtr + (y * widthStep);
+
+                    Utilities.CopyMemory(imagePointerOffset, dataBoxPointerOffset, bytesPerPixel);
                 }
             });
 

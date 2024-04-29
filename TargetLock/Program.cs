@@ -103,7 +103,6 @@ class Program
         ScreenCapturer.StartCapture(0, 0, Resolution.width, Resolution.height);
     }
 
-    [SuppressMessage("ReSharper", "AccessToDisposedClosure")]
     public static void HandleImage()
     {
         ImageComputation.Restart();
