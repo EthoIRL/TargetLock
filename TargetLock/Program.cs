@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using Emgu.CV;
 using Emgu.CV.CvEnum;
@@ -51,8 +51,6 @@ class Program
     private static readonly bool UsePrediction = true;
     private static readonly Prediction Predictor = new(1.4);
 
-    private static readonly Mat? Kernel = CvInvoke.GetStructuringElement(ElementShape.Rectangle, new Size(2, 2), new Point(-1, -1));
-
     private static readonly VectorOfVectorOfPoint Contours = new();
     private static readonly Mat Output = new();
 
@@ -64,7 +62,7 @@ class Program
     private static bool _lastSentLeft;
 
     private static readonly Socket Socket = new(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-    private static readonly IPAddress Broadcast = IPAddress.Parse("192.168.0.190");
+    private static readonly IPAddress Broadcast = IPAddress.Parse("192.168.68.53");
     private static readonly IPEndPoint EndPoint = new(Broadcast, 7483);
 
     private static readonly Stopwatch ImageComputation = new();
@@ -73,6 +71,7 @@ class Program
     public static readonly Image<Bgra, byte> LocalImage = new(Resolution.width, Resolution.height);
     public static IntPtr LocalImageDataPtr;
     private static readonly Image<Gray, byte> GrayImage = new(Resolution.width, Resolution.height);
+    private static IntPtr _grayImageDataPtr;
 
     private static Image<Bgra, byte> _originalView = new(Resolution.width, Resolution.height);
 
@@ -93,12 +92,15 @@ class Program
                     if (_originalView is {Data: { }})
                     {
                         CvInvoke.Imshow("Original View", _originalView);
-                        CvInvoke.Imshow("Filtered View", GrayImage);
-                        CvInvoke.WaitKey(1);
                     }
+                    CvInvoke.Imshow("Filtered View", GrayImage);
+                    CvInvoke.WaitKey(1);
                 }
             }).Start();
         }
+        
+        GCHandle pinnedArray = GCHandle.Alloc(GrayImage.Data, GCHandleType.Pinned);
+        _grayImageDataPtr = pinnedArray.AddrOfPinnedObject();
 
         ScreenCapturer.StartCapture(0, 0, Resolution.width, Resolution.height);
     }
@@ -121,6 +123,7 @@ class Program
                 for (int y = range.Item1; y < range.Item2; y++)
                 {
                     byte* currentLine = (byte*) (LocalImageDataPtr + y * LocalImage.MIplImage.WidthStep);
+                    byte* grayLine = (byte*) (_grayImageDataPtr + y * GrayImage.MIplImage.WidthStep);
 
                     for (int x = 0; x < StridePixels; x += 4)
                     {
@@ -137,15 +140,11 @@ class Program
                                 compute = true;
                             }
                             
-                            currentLine[x + 2] = 255;
-                            currentLine[x + 1] = 255;
-                            currentLine[x + 0] = 255;
+                            grayLine[x / 4] = 255;
                         }
                         else
                         {
-                            currentLine[x + 2] = 0;
-                            currentLine[x + 1] = 0;
-                            currentLine[x + 0] = 0;
+                            grayLine[x / 4] = 0;
                         }
                     }
                 }
@@ -154,8 +153,6 @@ class Program
 
         if (compute)
         {
-            CvInvoke.CvtColor(LocalImage, GrayImage, ColorConversion.Bgr2Gray);
-            CvInvoke.MorphologyEx(GrayImage, GrayImage, MorphOp.Dilate, Kernel, new Point(-1, -1), 2, BorderType.Replicate, new MCvScalar(255, 255, 255));
             CvInvoke.FindContours(GrayImage, Contours, Output, RetrType.External, ChainApproxMethod.ChainApproxNone);
         }
 
