@@ -62,7 +62,7 @@ class Program
     private static bool _lastSentLeft;
 
     private static readonly Socket Socket = new(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-    private static readonly IPAddress Broadcast = IPAddress.Parse("192.168.68.53");
+    private static readonly IPAddress Broadcast = IPAddress.Parse("192.168.68.56");
     private static readonly IPEndPoint EndPoint = new(Broadcast, 7483);
 
     private static readonly Stopwatch ImageComputation = new();
@@ -93,12 +93,13 @@ class Program
                     {
                         CvInvoke.Imshow("Original View", _originalView);
                     }
+
                     CvInvoke.Imshow("Filtered View", GrayImage);
                     CvInvoke.WaitKey(1);
                 }
             }).Start();
         }
-        
+
         GCHandle pinnedArray = GCHandle.Alloc(GrayImage.Data, GCHandleType.Pinned);
         _grayImageDataPtr = pinnedArray.AddrOfPinnedObject();
 
@@ -153,6 +154,7 @@ class Program
 
         if (compute)
         {
+            CvInvoke.Blur(GrayImage, GrayImage, new Size(8, 8), new Point(0, 0));
             CvInvoke.FindContours(GrayImage, Contours, Output, RetrType.External, ChainApproxMethod.ChainApproxNone);
         }
 
