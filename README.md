@@ -9,7 +9,7 @@ General purpose color aimbot (with the intent for BattleBit Remastered). Meant t
 ![showcase.gif](showcase.gif)
 _Showcased using OBS with an overlapping debug window_
 
-## Basic Features
+## Features
 * Auto fire
 * Custom fov
 * Slowdown (Makes snapping less obvious; but maintains speed when on target)
@@ -19,9 +19,11 @@ _Showcased using OBS with an overlapping debug window_
 ## Known issues
 * #### Mouse acceleration must be turned off in windows (Enhance Pointer Precision), will cause overshooting/undershooting if enabled.
 * .NET causing high latency per image calculation during the first few minutes of startup (R2R is being used however it still seems to be an issue).
+* AOT compiling does NOT work with SharpDX.
+
+## Battlebit issues
 * Playing long periods (_Alt tabbing? idk what causes this_) BattleBit causes GPU utilization to max; timings get thrown off everything is wack causing weird jitter within the Aimbot. This seems to be an independent issue with BattleBit itself. **You can fix it by setting fps to 30 and then back to your regular frame rate**, gpu utilization will go down.
 * Magnified scopes in BattleBit jitter if _**WaitForNewFrame**_ is off.
-* AOT compiling does NOT work with SharpDX.
 * Locks onto USA arm patch, really annoying can't really do anything about it easily. (Might switch to Pink or Purple later on).
 
 ## Setup
@@ -36,7 +38,7 @@ Publish for [R2R](https://learn.microsoft.com/en-us/dotnet/core/deploying/ready-
 ``
 dotnet publish -c Release -o publish
 ``
-## Game Configuration
+## BBR Game Configuration
 * Change ``Enemy Color`` to ``(0, 0, 255)`` (BLUE) in Gameplay -> Enemy Color.
 * Change ``Enemy Icon Size`` to ``4.0`` in Gameplay -> Enemy Color (This is below Friendly Color & Icon size; blame BattleBit).
 * Anti aliasing may cause movement jitter feel free to experiment.
