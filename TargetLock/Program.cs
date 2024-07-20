@@ -141,11 +141,11 @@ class Program
                                 compute = true;
                             }
                             
-                            grayLine[x / 4] = 255;
+                            grayLine[x >> 2] = 255;
                         }
                         else
                         {
-                            grayLine[x / 4] = 0;
+                            grayLine[x >> 2] = 0;
                         }
                     }
                 }
@@ -260,8 +260,7 @@ class Program
                 deltaY = predictions.deltaY;
             }
 
-            var data = PreparePacket((short) deltaX, (short) deltaY, false, leftFire);
-            Socket.Send(data);
+            Socket.Send(PreparePacket((short) deltaX, (short) deltaY, false, leftFire));
         }
         else
         {
