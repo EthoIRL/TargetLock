@@ -1,6 +1,4 @@
-﻿using System.Collections.Concurrent;
-using System.Diagnostics;
-using System.Runtime.InteropServices;
+﻿using System.Diagnostics;
 using SharpDX;
 using SharpDX.Direct3D11;
 using SharpDX.DXGI;
@@ -14,6 +12,8 @@ public static class ScreenCapturer
 {
     private static readonly Stopwatch ScWatch = new();
     private static readonly List<long> Timings = new();
+
+    public static DataBox GpuImage;
 
     public static void StartCapture(Int32 adapterIndex, Int32 displayIndex, int outputWidth, int outputHeight)
     {
@@ -50,19 +50,11 @@ public static class ScreenCapturer
         using Texture2D texture2D = new Texture2D(device, texture2DDescription);
         using OutputDuplication outputDuplication = output1.DuplicateOutput(device);
 
-        DataBox dataBox = device.ImmediateContext.MapSubresource(texture2D, 0, MapMode.Read, MapFlags.None);
+        GpuImage = device.ImmediateContext.MapSubresource(texture2D, 0, MapMode.Read, MapFlags.None);
 
         ResourceRegion resourceRegion = new ResourceRegion(centerWidth, centerHeight, 0, centerWidth + outputWidth, centerHeight + outputHeight, 1);
-
-        GCHandle pinnedArray = GCHandle.Alloc(Program.LocalImage.Data, GCHandleType.Pinned);
-        Program.LocalImageDataPtr = pinnedArray.AddrOfPinnedObject();
         
-        var heightPartitioner = Partitioner.Create(0, outputHeight);
-        
-        int widthStep = Program.LocalImage.MIplImage.WidthStep;
         bool previousState = false;
-        
-        int bytesPerPixel = outputWidth * 4;
 
         while (true)
         {
@@ -84,22 +76,12 @@ public static class ScreenCapturer
             var screenTexture2D = screenResource.QueryInterface<Texture2D>();
             device.ImmediateContext.CopySubresourceRegion(screenTexture2D, 0, resourceRegion, texture2D, 0);
 
-            Parallel.ForEach(heightPartitioner, range =>
-            {
-                for (int y = range.Item1; y < range.Item2; y++)
-                {
-                    var dataBoxPointerOffset = dataBox.DataPointer + (y * dataBox.RowPitch);
-                    var imagePointerOffset = Program.LocalImageDataPtr + (y * widthStep);
-
-                    Utilities.CopyMemory(imagePointerOffset, dataBoxPointerOffset, bytesPerPixel);
-                }
-            });
+            Program.ScreenshotSync = ScWatch.ElapsedTicks;
+            Program.HandleImage();
 
             screenTexture2D.Dispose();
             screenResource.Dispose();
 
-            Program.ScreenshotSync = ScWatch.ElapsedTicks;
-            Program.HandleImage();
             ScWatch.Stop();
 
             if (!ScWatch.IsRunning)
