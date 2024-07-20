@@ -269,6 +269,8 @@ class Program
         }
         else
         {
+            Predictor.Reset();
+            
             if (_lastSentLeft)
             {
                 var data = PreparePacket(0, 0, false, false);
