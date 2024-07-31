@@ -4,7 +4,7 @@ namespace TargetLock;
 
 public class Prediction
 {
-    public readonly CircularBuffer<(int x, int y)> MouseStates = new(9);
+    private readonly CircularBuffer<(double x, double y)> _mouseStates = new(9);
     private bool _hasMouseStates;
 
     private readonly double _correction;
@@ -14,11 +14,13 @@ public class Prediction
         _correction = correction;
     }
 
-    public (int deltaX, int deltaY) HandlePredictions(int deltaX, int deltaY)
+    public (double deltaX, double deltaY) HandlePredictions(double deltaX, double deltaY)
     {
+        _mouseStates.PushFront((deltaX, deltaY));
+        
         if (!_hasMouseStates)
         {
-            var count = MouseStates.Count();
+            var count = _mouseStates.Count();
             if (count >= 9)
             {
                 _hasMouseStates = true;
@@ -27,8 +29,8 @@ public class Prediction
 
         if (_hasMouseStates)
         {
-            var xArray = MouseStates.Select(state => state.x).ToArray();
-            var yArray = MouseStates.Select(state => state.y).ToArray();
+            var xArray = _mouseStates.Select(state => state.x).ToArray();
+            var yArray = _mouseStates.Select(state => state.y).ToArray();
 
             if (SameSign(xArray, 3, deltaX))
             {
@@ -44,7 +46,7 @@ public class Prediction
         return (deltaX, deltaY);
     }
 
-    private bool SameSign(int[] values, int length, int value, int offset = 0)
+    private bool SameSign(double[] values, int length, double value, int offset = 0)
     {
         for (int i = offset; i < length; i++)
         {
@@ -59,7 +61,7 @@ public class Prediction
 
     public void Reset()
     {
-        MouseStates.Clear();
+        _mouseStates.Clear();
         _hasMouseStates = false;
     }
 }
