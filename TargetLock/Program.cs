@@ -197,12 +197,6 @@ class Program
                 var lowestY = rect.Y + rect.Height;
 
                 return Math.Sqrt(Math.Pow(Resolution.width / 2.0 - centerX, 2) + Math.Pow(Resolution.height / 2.0 - lowestY, 2));
-            }).ThenBy(rect =>
-            {
-                // Visibility ordering
-                var sizeRatio = rect.Height / (double) rect.Width;
-
-                return sizeRatio - 1;
             }).ToArray();
 
             var nearest = validBoxes[0];
