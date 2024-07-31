@@ -56,6 +56,9 @@ public static class ScreenCapturer
         
         bool previousState = false;
 
+        Texture2D texturePtr = null!;
+        bool firstRun = true;
+        
         while (true)
         {
             ScWatch.Restart();
@@ -73,13 +76,18 @@ public static class ScreenCapturer
                 continue;
             }
 
-            var screenTexture2D = screenResource.QueryInterface<Texture2D>();
-            device.ImmediateContext.CopySubresourceRegion(screenTexture2D, 0, resourceRegion, texture2D, 0);
+            if (firstRun)
+            {
+                screenResource.QueryInterface(typeof(Texture2D).GUID, out var screenPtr);
+                texturePtr = CppObject.FromPointer<Texture2D>(screenPtr);
+                firstRun = false;
+            }
+            
+            device.ImmediateContext.CopySubresourceRegion(texturePtr, 0, resourceRegion, texture2D, 0);
 
             Program.ScreenshotSync = ScWatch.ElapsedTicks;
             Program.HandleImage();
 
-            screenTexture2D.Dispose();
             screenResource.Dispose();
 
             ScWatch.Stop();
