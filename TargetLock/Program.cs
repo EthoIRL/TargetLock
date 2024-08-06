@@ -25,7 +25,6 @@ class Program
     #endif
 
     private static readonly bool AutoFire = false;
-    private static readonly bool ShowDebug = false;
 
     /// <summary>
     /// Attempts to Sync to fps at the cost of latency for smoothness
@@ -161,7 +160,6 @@ class Program
 
         if (compute)
         {
-            CvInvoke.Blur(GrayImage, GrayImage, new Size(8, 8), new Point(0, 0));
             CvInvoke.FindContours(GrayImage, Contours, Output, RetrType.External, ChainApproxMethod.ChainApproxNone);
         }
 
