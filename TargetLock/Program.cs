@@ -165,12 +165,10 @@ class Program
 
         if (Contours.Length != 0 && compute)
         {
-            var contourArray = Contours.ToArrayOfArray();
-            Rectangle[] boundingBoxes = new Rectangle[contourArray.Length];
-
-            for (int i = 0; i < contourArray.Length; i++)
+            Span<Rectangle> boundingBoxes = stackalloc Rectangle[Contours.Size];
+            for (int i = 0; i < Contours.Size; i++)
             {
-                boundingBoxes[i] = CvInvoke.BoundingRectangle(contourArray[i]);
+                boundingBoxes[i] = CvInvoke.BoundingRectangle(Contours[i]);
             }
 
             #if DEBUG
