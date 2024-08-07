@@ -31,7 +31,7 @@ class Program
     /// </summary>
     private static readonly bool WaitForNewFrame = false;
 
-    private static readonly int Fps = 200;
+    private static readonly int Fps = 300;
     private static readonly double FpsInTicks = (1000.0 / Fps) * 10000.0;
 
     private static readonly bool Slowdown = false;
@@ -50,7 +50,7 @@ class Program
 
     private const int BlueThreshold = 175;
 
-    private static readonly bool UsePrediction = true;
+    private static readonly bool UsePrediction = false;
     private static readonly Prediction Predictor = new(1.4);
 
     private static readonly VectorOfVectorOfPoint Contours = new();
@@ -81,6 +81,9 @@ class Program
     private static readonly Stopwatch Waiter = new();
 
     private static readonly OrderablePartitioner<Tuple<int, int>> RangePartitioner = Partitioner.Create(0, Resolution.height);
+
+    private static readonly PidController PidControllerX = new(0.95, 0.04, 0.5);
+    private static readonly PidController PidControllerY = new(0.95, 0.04, 0.5);
 
     [SupportedOSPlatform("windows")]
     static void Main(string[] args)
@@ -203,17 +206,19 @@ class Program
             }
 
             var nearest = boundingBoxes[near.id];
-            var lowestY = nearest.Y + nearest.Height;
 
-            var deltaX = centerX - CenterMouseX;
-            var deltaY = lowestY - CenterMouseY;
+            double centerX = nearest.X + nearest.Width / 2.0;
+            int lowestY = nearest.Y + nearest.Height;
 
-            deltaX = (int) Math.Ceiling(deltaX / SlowDivisorX);
-            deltaY = (int) Math.Ceiling(deltaY / SlowDivisorY);
+            double deltaX = centerX - CenterMouseX;
+            double deltaY = lowestY - CenterMouseY;
+
+            deltaX /= SlowDivisorX;
+            deltaY /= SlowDivisorY;
 
             #if DEBUG
             CvInvoke.Line(originalImage, new Point(WindowResolution.width / 2, WindowResolution.height / 2),
-                new Point((int) (centerX * WidthRatio), (int) (lowestY * HeightRatio)), new MCvScalar(255, 0, 255));
+                new Point((int) (centerX * WidthRatio), (int) (lowestY * HeightRatio)), new MCvScalar(255, 255, 0));
             #endif
 
             if (Slowdown)
@@ -250,22 +255,43 @@ class Program
                 }
             }
 
+            if (Math.Abs(deltaX) > 50 || Math.Abs(deltaY) > 50)
+            {
+                if (UsePrediction)
+                {
+                    Predictor.Reset();
+                }
+
+                PidControllerX.Reset();
+                PidControllerY.Reset();
+            }
+
             if (UsePrediction)
             {
                 var predictions = Predictor.HandlePredictions(deltaX, deltaY);
 
-                Predictor.MouseStates.PushFront((deltaX, deltaY));
+                #if DEBUG
+                CvInvoke.Line(originalImage, new Point(WindowResolution.width / 2, WindowResolution.height / 2),
+                    new Point((int) ((predictions.deltaX + CenterMouseX) * WidthRatio), (int) ((predictions.deltaY + CenterMouseY) * HeightRatio)), new MCvScalar(107, 255, 50));
+                CvInvoke.Circle(originalImage, new Point((int)((predictions.deltaX + CenterMouseX) * WidthRatio), (int)((predictions.deltaY + CenterMouseY) * HeightRatio)), 2, new MCvScalar(255, 255, 255), 4, LineType.Filled);
+                #endif
 
                 deltaX = predictions.deltaX;
                 deltaY = predictions.deltaY;
             }
 
-            Socket.Send(PreparePacket((short) deltaX, (short) deltaY, false, leftFire));
+            var stepX = (short) PidControllerX.Calculate(deltaX);
+            var stepY = (short) PidControllerY.Calculate(deltaY);
+
+            Socket.Send(PreparePacket(stepX, stepY, false, leftFire));
         }
         else
         {
+            PidControllerX.Reset();
+            PidControllerY.Reset();
+
             Predictor.Reset();
-            
+
             if (_lastSentLeft)
             {
                 var data = PreparePacket(0, 0, false, false);
