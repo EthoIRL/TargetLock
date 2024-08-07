@@ -20,6 +20,7 @@ public static class ScreenCapturer
         using Factory1 factory1 = new Factory1();
         using Adapter1 adapter1 = factory1.GetAdapter1(adapterIndex);
         using Device device = new Device(adapter1);
+        using DeviceContext deviceContext = device.ImmediateContext;
         using Output output = adapter1.GetOutput(displayIndex);
         using Output1 output1 = output.QueryInterface<Output1>();
 
@@ -83,7 +84,7 @@ public static class ScreenCapturer
                 firstRun = false;
             }
             
-            device.ImmediateContext.CopySubresourceRegion(texturePtr, 0, resourceRegion, texture2D, 0);
+            deviceContext.CopySubresourceRegion(texturePtr, 0, resourceRegion, texture2D, 0);
 
             Program.ScreenshotSync = ScWatch.ElapsedTicks;
             Program.HandleImage();
