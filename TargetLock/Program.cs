@@ -160,7 +160,7 @@ class Program
 
         if (compute)
         {
-            CvInvoke.FindContours(GrayImage, Contours, Output, RetrType.External, ChainApproxMethod.ChainApproxNone);
+            CvInvoke.FindContours(GrayImage, Contours, Output, RetrType.External, ChainApproxMethod.ChainApproxSimple);
         }
 
         if (Contours.Length != 0 && compute)
