@@ -186,18 +186,23 @@ class Program
             }
             #endif
 
-            var validBoxes = boundingBoxes.OrderBy(rect =>
+            (int id, double distance) near = (0, 99999);
+            for (int i = 0; i < boundingBoxes.Length; i++)
             {
-                // Shortest distance to center
-                var centerX = rect.X + rect.Width / 2.0;
-                var lowestY = rect.Y + rect.Height;
+                var rect = boundingBoxes[i];
 
-                return Math.Sqrt(Math.Pow(Resolution.width / 2.0 - centerX, 2) + Math.Pow(Resolution.height / 2.0 - lowestY, 2));
-            }).ToArray();
+                var rectCenterX = rect.X + rect.Width / 2.0;
+                var rectLowestY = rect.Y + rect.Height;
 
-            var nearest = validBoxes[0];
+                var distanceToCenter = Math.Sqrt(Math.Pow(CenterMouseX - rectCenterX, 2) + Math.Pow(CenterMouseY - rectLowestY, 2));
 
-            var centerX = (int) Math.Ceiling(nearest.X + nearest.Width / 2.0);
+                if (distanceToCenter < near.distance)
+                {
+                    near = (i, distanceToCenter);
+                }
+            }
+
+            var nearest = boundingBoxes[near.id];
             var lowestY = nearest.Y + nearest.Height;
 
             var deltaX = centerX - CenterMouseX;
