@@ -1,4 +1,5 @@
 ﻿// #define DEBUG
+
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Drawing;
@@ -71,7 +72,10 @@ class Program
 
     private static readonly Stopwatch Waiter = new();
 
-    private static readonly OrderablePartitioner<Tuple<int, int>> RangePartitioner = Partitioner.Create(0, Resolution.height);
+    private static readonly ParallelOptions ParallelizationOptions = new()
+    {
+        MaxDegreeOfParallelism = Environment.ProcessorCount
+    };
 
     [SupportedOSPlatform("windows")]
     static void Main(string[] args)
@@ -109,48 +113,40 @@ class Program
             bool compute = false;
             unsafe
             {
-                Parallel.ForEach(RangePartitioner, range =>
+                Parallel.For(0, Resolution.height, ParallelizationOptions, y =>
                 {
-                    for (int y = range.Item1; y < range.Item2; y++)
-                    {
-                        byte* currentLine = (byte*) (ScreenCapturer.GpuImage.DataPointer + y * ScreenCapturer.GpuImage.RowPitch);
+                    byte* currentLine = (byte*) (ScreenCapturer.GpuImage.DataPointer + y * ScreenCapturer.GpuImage.RowPitch);
 
-                        #if DEBUG
+                    #if DEBUG
                         byte* grayLine = (byte*) (_grayImageDataPtr + y * GrayImage.MIplImage.WidthStep);
                         var imagePointerOffset = _localImageDataPtr + (y * LocalImage.MIplImage.WidthStep);
                         Utilities.CopyMemory(imagePointerOffset, (IntPtr) currentLine, StridePixels);
-                        #endif
+                    #endif
 
-                        for (int x = 0; x < StridePixels; x += 4)
+                    for (int x = 0; x < StridePixels; x += 4)
+                    {
+                        byte red = currentLine[x + 2];
+                        byte green = currentLine[x + 1];
+                        byte blue = currentLine[x];
+
+                        var isBlue = IsBlue(red, green, blue);
+
+                        if (isBlue)
                         {
-                            byte red = currentLine[x + 2];
-                            byte green = currentLine[x + 1];
-                            byte blue = currentLine[x];
-
-                            var isBlue = IsBlue(red, green, blue);
-                            // bool isBlue = green <= GreenTolerance && red <= RedTolerance && blue >= BlueMinimum || blue - green > BlueThreshold && blue - red > BlueThreshold;
-
-                            if (isBlue)
+                            if (!compute)
                             {
-                                if (!compute)
-                                {
-                                    compute = true;
-                                }
-
-                                var distance = Math.Sqrt(Math.Pow(CenterMouseX - (x >> 2), 2) + Math.Pow(CenterMouseY - y, 2));
-
-                                if (distance - closest.distance <= 10 && y > closest.y)
-                                {
-                                    closest = (x >> 2, y, distance);
-                                }
-                                
-                                // if (y > closest.y && distance - 15 <= closest.distance)
-                                // {
-                                //     closest = (x >> 2, y, distance);
-                                // }
+                                compute = true;
                             }
 
-                            #if DEBUG
+                            var distance = Math.Sqrt(Math.Pow(CenterMouseX - (x >> 2), 2) + Math.Pow(CenterMouseY - y, 2));
+
+                            if (distance - closest.distance <= 10 && y > closest.y)
+                            {
+                                closest = (x >> 2, y, distance);
+                            }
+                        }
+
+                        #if DEBUG
                             if (isBlue)
                             {
                                 grayLine[x >> 2] = 255;
@@ -159,8 +155,7 @@ class Program
                             {
                                 grayLine[x >> 2] = 0;
                             }
-                            #endif
-                        }
+                        #endif
                     }
                 });
             }
@@ -201,7 +196,7 @@ class Program
                     {
                         Predictor.Reset();
                     }
-                    
+
                     var predictions = Predictor.HandlePredictions(deltaX, deltaY);
 
                     #if DEBUG
