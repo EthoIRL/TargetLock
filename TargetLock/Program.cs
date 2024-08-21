@@ -104,6 +104,7 @@ class Program
 
     public static void HandleImage()
     {
+        Task.Run(() =>
         {
             ImageComputation.Restart();
             (int x, int y, double distance) closest = (0, -Int32.MaxValue, Double.MaxValue);
@@ -247,6 +248,7 @@ class Program
                 _originalView = originalImage;
             }
             #endif
+        });
 
         ImageComputation.Stop();
 
