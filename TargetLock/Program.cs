@@ -9,7 +9,6 @@ using System.Runtime.Versioning;
 using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
-using Emgu.CV.Util;
 using SharpDX;
 
 namespace TargetLock;
@@ -51,13 +50,10 @@ class Program
     private static readonly bool UsePrediction = false;
     private static readonly Prediction Predictor = new(1.4);
 
-    private static readonly VectorOfVectorOfPoint Contours = new();
-    private static readonly Mat Output = new();
-
     private static readonly int StridePixels = Resolution.width * 4;
 
     private static readonly Socket Socket = new(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-    private static readonly IPAddress Broadcast = IPAddress.Parse("192.168.68.56");
+    private static readonly IPAddress Broadcast = IPAddress.Parse("192.168.68.59");
     private static readonly IPEndPoint EndPoint = new(Broadcast, 7483);
 
     private static readonly Stopwatch ImageComputation = new();
@@ -69,10 +65,9 @@ class Program
     private static readonly Image<Bgra, byte> LocalImage = new(Resolution.width, Resolution.height);
     private static IntPtr _localImageDataPtr;
     private static Image<Bgra, byte> _originalView = new(Resolution.width, Resolution.height);
-    #endif
-
     private static readonly Image<Gray, byte> GrayImage = new(Resolution.width, Resolution.height);
     private static IntPtr _grayImageDataPtr;
+    #endif
 
     private static readonly Stopwatch Waiter = new();
 
@@ -101,190 +96,157 @@ class Program
         }).Start();
 
         _localImageDataPtr = GCHandle.Alloc(LocalImage.Data, GCHandleType.Pinned).AddrOfPinnedObject();
-        #endif
-
         _grayImageDataPtr = GCHandle.Alloc(GrayImage.Data, GCHandleType.Pinned).AddrOfPinnedObject();
+        #endif
 
         ScreenCapturer.StartCapture(0, 0, Resolution.width, Resolution.height);
     }
 
     public static void HandleImage()
     {
-        ImageComputation.Restart();
-
-        bool compute = false;
-        unsafe
         {
-            Parallel.ForEach(RangePartitioner, range =>
+            ImageComputation.Restart();
+            (int x, int y, double distance) closest = (0, -Int32.MaxValue, Double.MaxValue);
+
+            bool compute = false;
+            unsafe
             {
-                for (int y = range.Item1; y < range.Item2; y++)
+                Parallel.ForEach(RangePartitioner, range =>
                 {
-                    byte* currentLine = (byte*) (ScreenCapturer.GpuImage.DataPointer + y * ScreenCapturer.GpuImage.RowPitch);
-                    byte* grayLine = (byte*) (_grayImageDataPtr + y * GrayImage.MIplImage.WidthStep);
-
-                    #if DEBUG
-                    var imagePointerOffset = _localImageDataPtr + (y * LocalImage.MIplImage.WidthStep);
-                    Utilities.CopyMemory(imagePointerOffset, (IntPtr) currentLine, StridePixels);
-                    #endif
-
-                    for (int x = 0; x < StridePixels; x += 4)
+                    for (int y = range.Item1; y < range.Item2; y++)
                     {
-                        byte red = currentLine[x + 2];
-                        byte green = currentLine[x + 1];
-                        byte blue = currentLine[x];
+                        byte* currentLine = (byte*) (ScreenCapturer.GpuImage.DataPointer + y * ScreenCapturer.GpuImage.RowPitch);
 
-                        bool isBlue = green <= GreenTolerance && red <= RedTolerance && blue >= BlueMinimum || blue - green > BlueThreshold && blue - red > BlueThreshold;
+                        #if DEBUG
+                        byte* grayLine = (byte*) (_grayImageDataPtr + y * GrayImage.MIplImage.WidthStep);
+                        var imagePointerOffset = _localImageDataPtr + (y * LocalImage.MIplImage.WidthStep);
+                        Utilities.CopyMemory(imagePointerOffset, (IntPtr) currentLine, StridePixels);
+                        #endif
 
-                        if (isBlue)
+                        for (int x = 0; x < StridePixels; x += 4)
                         {
-                            if (!compute)
+                            byte red = currentLine[x + 2];
+                            byte green = currentLine[x + 1];
+                            byte blue = currentLine[x];
+
+                            var isBlue = IsBlue(red, green, blue);
+                            // bool isBlue = green <= GreenTolerance && red <= RedTolerance && blue >= BlueMinimum || blue - green > BlueThreshold && blue - red > BlueThreshold;
+
+                            if (isBlue)
                             {
-                                compute = true;
+                                if (!compute)
+                                {
+                                    compute = true;
+                                }
+
+                                var distance = Math.Sqrt(Math.Pow(CenterMouseX - (x >> 2), 2) + Math.Pow(CenterMouseY - y, 2));
+
+                                if (distance - closest.distance <= 10 && y > closest.y)
+                                {
+                                    closest = (x >> 2, y, distance);
+                                }
+                                
+                                // if (y > closest.y && distance - 15 <= closest.distance)
+                                // {
+                                //     closest = (x >> 2, y, distance);
+                                // }
                             }
 
-                            grayLine[x >> 2] = 255;
-                        }
-                        else
-                        {
-                            grayLine[x >> 2] = 0;
+                            #if DEBUG
+                            if (isBlue)
+                            {
+                                grayLine[x >> 2] = 255;
+                            }
+                            else
+                            {
+                                grayLine[x >> 2] = 0;
+                            }
+                            #endif
                         }
                     }
-                }
-            });
-        }
-
-        #if DEBUG
-        Image<Bgra, byte> originalImage = LocalImage.Resize(WindowResolution.width, WindowResolution.height, WindowResolution.method);
-        #endif
-
-        if (compute)
-        {
-            CvInvoke.FindContours(GrayImage, Contours, Output, RetrType.External, ChainApproxMethod.ChainApproxSimple);
-        }
-
-        if (Contours.Length != 0 && compute)
-        {
-            Span<Rectangle> boundingBoxes = stackalloc Rectangle[Contours.Size];
-            for (int i = 0; i < Contours.Size; i++)
-            {
-                boundingBoxes[i] = CvInvoke.BoundingRectangle(Contours[i]);
+                });
             }
 
             #if DEBUG
-            foreach (var rect in boundingBoxes)
-            {
-                var centerXLocal = rect.X + rect.Width / 2;
-                var centerYLocal = rect.Y + rect.Height / 2;
+            Image<Bgra, byte> originalImage = LocalImage.Resize(WindowResolution.width, WindowResolution.height, WindowResolution.method);
+            #endif
 
+            if (compute)
+            {
+                double deltaX = closest.x - CenterMouseX;
+                double deltaY = closest.y - CenterMouseY;
+
+                deltaX /= SlowDivisorX;
+                deltaY /= SlowDivisorY;
+
+                #if DEBUG
                 CvInvoke.Line(originalImage, new Point(WindowResolution.width / 2, WindowResolution.height / 2),
-                    new Point((int) (centerXLocal * WidthRatio), (int) (centerYLocal * HeightRatio)), new MCvScalar(255, 255, 255));
+                    new Point((int) ((closest.x) * WidthRatio), (int) (closest.y * HeightRatio)), new MCvScalar(255, 255, 0));
+                #endif
 
-                var newRectangle = new Rectangle(new Point((int) (rect.X * WidthRatio), (int) (rect.Y * HeightRatio)),
-                    new Size((int) (rect.Width * WidthRatio), (int) (rect.Height * HeightRatio)));
-                CvInvoke.Rectangle(originalImage, newRectangle, new MCvScalar(0, 255, 255));
-            }
-            #endif
-
-            (int id, double distance) near = (0, 99999);
-            for (int i = 0; i < boundingBoxes.Length; i++)
-            {
-                var rect = boundingBoxes[i];
-
-                var rectCenterX = rect.X + rect.Width / 2.0;
-                var rectLowestY = rect.Y + rect.Height;
-
-                var distanceToCenter = Math.Sqrt(Math.Pow(CenterMouseX - rectCenterX, 2) + Math.Pow(CenterMouseY - rectLowestY, 2));
-
-                if (distanceToCenter < near.distance)
+                if (Slowdown)
                 {
-                    near = (i, distanceToCenter);
-                }
-            }
-
-            var nearest = boundingBoxes[near.id];
-
-            double centerX = nearest.X + nearest.Width / 2.0;
-            int lowestY = nearest.Y + nearest.Height;
-
-            double deltaX = centerX - CenterMouseX;
-            double deltaY = lowestY - CenterMouseY;
-
-            deltaX /= SlowDivisorX;
-            deltaY /= SlowDivisorY;
-
-            #if DEBUG
-            CvInvoke.Line(originalImage, new Point(WindowResolution.width / 2, WindowResolution.height / 2),
-                new Point((int) (centerX * WidthRatio), (int) (lowestY * HeightRatio)), new MCvScalar(255, 255, 0));
-            #endif
-
-            if (Slowdown)
-            {
-                if (Math.Abs(deltaX) > SlowRadius)
-                {
-                    deltaX = (int) Math.Floor(deltaX * SlowSpeed);
-                }
-
-                if (Math.Abs(deltaY) > SlowRadius)
-                {
-                    deltaY = (int) Math.Floor(deltaY * SlowSpeed);
-                }
-            }
-
-                {
+                    if (Math.Abs(deltaX) > SlowRadius)
                     {
+                        deltaX = (int) Math.Floor(deltaX * SlowSpeed);
+                    }
+
+                    if (Math.Abs(deltaY) > SlowRadius)
+                    {
+                        deltaY = (int) Math.Floor(deltaY * SlowSpeed);
                     }
                 }
-            }
 
-            if (Math.Abs(deltaX) > 50 || Math.Abs(deltaY) > 50)
+                if (Math.Abs(deltaX) > 50 || Math.Abs(deltaY) > 50)
+                {
+                    if (UsePrediction)
+                    {
+                        Predictor.Reset();
+                    }
+
+                    PidControllerX.Reset();
+                    PidControllerY.Reset();
+                }
+
+                if (UsePrediction)
+                {
+                    var predictions = Predictor.HandlePredictions(deltaX, deltaY);
+
+                    #if DEBUG
+                    CvInvoke.Line(originalImage, new Point(WindowResolution.width / 2, WindowResolution.height / 2),
+                        new Point((int) ((predictions.deltaX + CenterMouseX) * WidthRatio), (int) ((predictions.deltaY + CenterMouseY) * HeightRatio)),
+                        new MCvScalar(107, 255, 50));
+                    CvInvoke.Circle(originalImage, new Point((int) ((predictions.deltaX + CenterMouseX) * WidthRatio), (int) ((predictions.deltaY + CenterMouseY) * HeightRatio)),
+                        2,
+                        new MCvScalar(255, 255, 255), 4, LineType.Filled);
+                    #endif
+
+                    deltaX = predictions.deltaX;
+                    deltaY = predictions.deltaY;
+                }
+
+                var stepX = (short) PidControllerX.Calculate(deltaX);
+                var stepY = (short) PidControllerY.Calculate(deltaY);
+
+                Socket.Send(PreparePacket(stepX, stepY));
+            }
+            else
             {
+                PidControllerX.Reset();
+                PidControllerY.Reset();
+
                 if (UsePrediction)
                 {
                     Predictor.Reset();
                 }
-
-                PidControllerX.Reset();
-                PidControllerY.Reset();
             }
 
-            if (UsePrediction)
+            #if DEBUG
+            if (originalImage != null)
             {
-                var predictions = Predictor.HandlePredictions(deltaX, deltaY);
-
-                #if DEBUG
-                CvInvoke.Line(originalImage, new Point(WindowResolution.width / 2, WindowResolution.height / 2),
-                    new Point((int) ((predictions.deltaX + CenterMouseX) * WidthRatio), (int) ((predictions.deltaY + CenterMouseY) * HeightRatio)), new MCvScalar(107, 255, 50));
-                CvInvoke.Circle(originalImage, new Point((int)((predictions.deltaX + CenterMouseX) * WidthRatio), (int)((predictions.deltaY + CenterMouseY) * HeightRatio)), 2, new MCvScalar(255, 255, 255), 4, LineType.Filled);
-                #endif
-
-                deltaX = predictions.deltaX;
-                deltaY = predictions.deltaY;
+                _originalView = originalImage;
             }
-
-            var stepX = (short) PidControllerX.Calculate(deltaX);
-            var stepY = (short) PidControllerY.Calculate(deltaY);
-
-            Socket.Send(PreparePacket(stepX, stepY, false, leftFire));
-        }
-        else
-        {
-            PidControllerX.Reset();
-            PidControllerY.Reset();
-
-            Predictor.Reset();
-
-            {
-                var data = PreparePacket(0, 0, false, false);
-                Socket.Send(data);
-            }
-        }
-
-        #if DEBUG
-        if (originalImage != null)
-        {
-            _originalView = originalImage;
-        }
-        #endif
+            #endif
 
         ImageComputation.Stop();
 
@@ -304,6 +266,11 @@ class Program
                 }
             }
         }
+    }
+
+    private static bool IsBlue(byte red, byte green, byte blue)
+    {
+        return green <= GreenTolerance && red <= RedTolerance && blue >= BlueMinimum || blue - green > BlueThreshold && blue - red > BlueThreshold;
     }
 
     private static byte[] PreparePacket(short deltaX, short deltaY, bool ignoreAim = false, bool left = false, bool right = false, bool middle = false)
