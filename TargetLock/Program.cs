@@ -73,9 +73,6 @@ class Program
 
     private static readonly OrderablePartitioner<Tuple<int, int>> RangePartitioner = Partitioner.Create(0, Resolution.height);
 
-    private static readonly PidController PidControllerX = new(0.95, 0.04, 0.5);
-    private static readonly PidController PidControllerY = new(0.95, 0.04, 0.5);
-
     [SupportedOSPlatform("windows")]
     static void Main(string[] args)
     {
@@ -198,19 +195,13 @@ class Program
                     }
                 }
 
-                if (Math.Abs(deltaX) > 50 || Math.Abs(deltaY) > 50)
+                if (UsePrediction)
                 {
-                    if (UsePrediction)
+                    if (Math.Abs(deltaX) > 50 || Math.Abs(deltaY) > 50)
                     {
                         Predictor.Reset();
                     }
-
-                    PidControllerX.Reset();
-                    PidControllerY.Reset();
-                }
-
-                if (UsePrediction)
-                {
+                    
                     var predictions = Predictor.HandlePredictions(deltaX, deltaY);
 
                     #if DEBUG
@@ -226,16 +217,10 @@ class Program
                     deltaY = predictions.deltaY;
                 }
 
-                var stepX = (short) PidControllerX.Calculate(deltaX);
-                var stepY = (short) PidControllerY.Calculate(deltaY);
-
-                Socket.Send(PreparePacket(stepX, stepY));
+                Task.Run(() => Socket.Send(PreparePacket((short) deltaX, (short) deltaY)));
             }
             else
             {
-                PidControllerX.Reset();
-                PidControllerY.Reset();
-
                 if (UsePrediction)
                 {
                     Predictor.Reset();
