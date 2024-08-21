@@ -11,7 +11,10 @@ namespace TargetLock;
 public static class ScreenCapturer
 {
     private static readonly Stopwatch ScWatch = new();
-    private static readonly List<long> Timings = new();
+    private static readonly Stopwatch CwWatch = new();
+    
+    private static readonly List<long> Timings = new(1000000);
+    private static readonly List<long> TimingsCw = new(1000000);
 
     public static DataBox GpuImage;
 
@@ -87,12 +90,18 @@ public static class ScreenCapturer
             deviceContext.CopySubresourceRegion(texturePtr, 0, resourceRegion, texture2D, 0);
 
             Program.ScreenshotSync = ScWatch.ElapsedTicks;
+            ScWatch.Stop();
+            CwWatch.Restart();
             Program.HandleImage();
+            CwWatch.Stop();
 
             screenResource.Dispose();
 
-            ScWatch.Stop();
-
+            if (!CwWatch.IsRunning)
+            {
+                TimingsCw.Add(CwWatch.ElapsedTicks);
+            }
+            
             if (!ScWatch.IsRunning)
             {
                 Timings.Add(ScWatch.ElapsedTicks);
@@ -101,6 +110,11 @@ public static class ScreenCapturer
             if (Timings.Count != 0 && Timings.Count % 100 == 0)
             {
                 Console.WriteLine($"Timings SC Avg: ({Timings.Average() / 10000.0}, {Timings.Count})");
+            }
+            
+            if (TimingsCw.Count != 0 && TimingsCw.Count % 100 == 0)
+            {
+                Console.WriteLine($"Timings CAL Avg: ({TimingsCw.Average() / 10000.0}, {TimingsCw.Count})");
             }
         }
     }
