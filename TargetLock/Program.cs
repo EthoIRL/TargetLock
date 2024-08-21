@@ -24,8 +24,6 @@ class Program
     private static readonly (int width, int height, Inter method) WindowResolution = new(896, 504, Inter.Nearest);
     #endif
 
-    private static readonly bool AutoFire = false;
-
     /// <summary>
     /// Attempts to Sync to fps at the cost of latency for smoothness
     /// </summary>
@@ -57,8 +55,6 @@ class Program
     private static readonly Mat Output = new();
 
     private static readonly int StridePixels = Resolution.width * 4;
-
-    private static bool _lastSentLeft;
 
     private static readonly Socket Socket = new(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
     private static readonly IPAddress Broadcast = IPAddress.Parse("192.168.68.56");
@@ -234,23 +230,8 @@ class Program
                 }
             }
 
-            var leftFire = false;
-            if (AutoFire)
-            {
-                if (nearest.Height / (double) nearest.Width > 0.65 && nearest.Width >= 8)
                 {
-                    var trueDeltaX = centerX - CenterMouseX;
-                    var trueDeltaY = lowestY - CenterMouseY;
-
-                    if (Math.Abs(trueDeltaY) < 4 && Math.Abs(trueDeltaX) < 1)
                     {
-                        leftFire = true;
-                        _lastSentLeft = true;
-                    }
-                    else
-                    {
-                        leftFire = false;
-                        _lastSentLeft = false;
                     }
                 }
             }
@@ -292,11 +273,9 @@ class Program
 
             Predictor.Reset();
 
-            if (_lastSentLeft)
             {
                 var data = PreparePacket(0, 0, false, false);
                 Socket.Send(data);
-                _lastSentLeft = false;
             }
         }
 
