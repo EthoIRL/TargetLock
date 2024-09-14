@@ -118,9 +118,9 @@ class Program
                 // Span<byte> currentLine = new Span<byte>((byte*)ScreenCapturer.GpuImage.DataPointer + y * ScreenCapturer.GpuImage.RowPitch, ScreenCapturer.GpuImage.RowPitch);
 
                 #if DEBUG
-                        byte* grayLine = (byte*) (_grayImageDataPtr + y * GrayImage.MIplImage.WidthStep);
-                        var imagePointerOffset = _localImageDataPtr + (y * LocalImage.MIplImage.WidthStep);
-                        Utilities.CopyMemory(imagePointerOffset, (IntPtr) currentLine, StridePixels);
+                byte* grayLine = (byte*) (_grayImageDataPtr + y * GrayImage.MIplImage.WidthStep);
+                var imagePointerOffset = _localImageDataPtr + (y * LocalImage.MIplImage.WidthStep);
+                Utilities.CopyMemory(imagePointerOffset, (IntPtr) currentLine, StridePixels);
                 #endif
 
                 for (int x = 0; x < StridePixels; x += 4)
@@ -147,21 +147,21 @@ class Program
                     }
 
                     #if DEBUG
-                            if (isBlue)
-                            {
-                                grayLine[x >> 2] = 255;
-                            }
-                            else
-                            {
-                                grayLine[x >> 2] = 0;
-                            }
+                    if (isBlue)
+                    {
+                        grayLine[x >> 2] = 255;
+                    }
+                    else
+                    {
+                        grayLine[x >> 2] = 0;
+                    }
                     #endif
                 }
             });
         }
 
         #if DEBUG
-            Image<Bgra, byte> originalImage = LocalImage.Resize(WindowResolution.width, WindowResolution.height, WindowResolution.method);
+        Image<Bgra, byte> originalImage = LocalImage.Resize(WindowResolution.width, WindowResolution.height, WindowResolution.method);
         #endif
 
         if (compute && closest.y != -Int32.MaxValue)
@@ -173,8 +173,8 @@ class Program
             deltaY /= SlowDivisorY;
 
             #if DEBUG
-                CvInvoke.Line(originalImage, new Point(WindowResolution.width / 2, WindowResolution.height / 2),
-                    new Point((int) ((closest.x) * WidthRatio), (int) (closest.y * HeightRatio)), new MCvScalar(255, 255, 0));
+            CvInvoke.Line(originalImage, new Point(WindowResolution.width / 2, WindowResolution.height / 2),
+                new Point((int) ((closest.x) * WidthRatio), (int) (closest.y * HeightRatio)), new MCvScalar(255, 255, 0));
             #endif
 
             if (Slowdown)
@@ -206,12 +206,12 @@ class Program
                 // });
 
                 #if DEBUG
-                    CvInvoke.Line(originalImage, new Point(WindowResolution.width / 2, WindowResolution.height / 2),
-                        new Point((int) ((predictions.deltaX + CenterMouseX) * WidthRatio), (int) ((predictions.deltaY + CenterMouseY) * HeightRatio)),
-                        new MCvScalar(107, 255, 50));
-                    CvInvoke.Circle(originalImage, new Point((int) ((predictions.deltaX + CenterMouseX) * WidthRatio), (int) ((predictions.deltaY + CenterMouseY) * HeightRatio)),
-                        2,
-                        new MCvScalar(255, 255, 255), 4, LineType.Filled);
+                CvInvoke.Line(originalImage, new Point(WindowResolution.width / 2, WindowResolution.height / 2),
+                    new Point((int) ((predictions.deltaX + CenterMouseX) * WidthRatio), (int) ((predictions.deltaY + CenterMouseY) * HeightRatio)),
+                    new MCvScalar(107, 255, 50));
+                CvInvoke.Circle(originalImage, new Point((int) ((predictions.deltaX + CenterMouseX) * WidthRatio), (int) ((predictions.deltaY + CenterMouseY) * HeightRatio)),
+                    2,
+                    new MCvScalar(255, 255, 255), 4, LineType.Filled);
                 #endif
 
                 deltaX = predictions.deltaX;
@@ -229,10 +229,10 @@ class Program
         }
 
         #if DEBUG
-            if (originalImage != null)
-            {
-                _originalView = originalImage;
-            }
+        if (originalImage != null)
+        {
+            _originalView = originalImage;
+        }
         #endif
 
         ImageComputation.Stop();
