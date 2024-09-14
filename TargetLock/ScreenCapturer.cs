@@ -54,7 +54,7 @@ public static class ScreenCapturer
         using Texture2D texture2D = new Texture2D(device, texture2DDescription);
         using OutputDuplication outputDuplication = output1.DuplicateOutput(device);
 
-        GpuImage = device.ImmediateContext.MapSubresource(texture2D, 0, MapMode.Read, MapFlags.None);
+        GpuImage = deviceContext.MapSubresource(texture2D, 0, MapMode.Read, MapFlags.None);
 
         ResourceRegion resourceRegion = new ResourceRegion(centerWidth, centerHeight, 0, centerWidth + outputWidth, centerHeight + outputHeight, 1);
         
