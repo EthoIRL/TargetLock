@@ -258,25 +258,12 @@ class Program
         return green <= GreenTolerance && red <= RedTolerance && blue >= BlueMinimum || blue - green > BlueThreshold && blue - red > BlueThreshold;
     }
 
-    private static byte[] PreparePacket(short deltaX, short deltaY, bool ignoreAim = false, bool left = false, bool right = false, bool middle = false)
+    private static byte[] PreparePacket(short deltaX, short deltaY)
     {
-        FromShort(deltaX, out var byte1, out var byte2);
-        FromShort(deltaY, out var byte3, out var byte4);
-
         return new[]
         {
-            byte1, byte2, byte3, byte4,
-            (byte) (ignoreAim ? 1 : 0),
-            (byte) (left ? 1 : 0),
-            (byte) (right ? 1 : 0),
-            (byte) (middle ? 1 : 0)
+            (byte)(deltaX & 0xFF), (byte)(deltaX >> 8), (byte)(deltaY & 0xFF), (byte)(deltaY >> 8)
         };
-    }
-
-    private static void FromShort(short number, out byte byte1, out byte byte2)
-    {
-        byte2 = (byte) (number >> 8);
-        byte1 = (byte) (number >> 0);
     }
 }
 #pragma warning restore CA1416
