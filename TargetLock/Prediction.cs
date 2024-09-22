@@ -4,55 +4,96 @@ namespace TargetLock;
 
 public class Prediction
 {
-    private readonly CircularBuffer<(double x, double y)> _mouseStates = new(9);
+    private readonly CircularBuffer<double> _x;
+    private readonly CircularBuffer<double> _y;
+
     private bool _hasMouseStates;
 
     private readonly double _correction;
 
-    public Prediction(double correction)
+    public Prediction(double correction, int trackedStates)
     {
         _correction = correction;
+        _y = new(trackedStates);
+        _x = new(trackedStates);
     }
 
+    private int _totalPredictions;
+    
     public (double deltaX, double deltaY) HandlePredictions(double deltaX, double deltaY)
     {
-        _mouseStates.PushFront((deltaX, deltaY));
-        
         if (!_hasMouseStates)
         {
-            var count = _mouseStates.Count();
-            if (count >= 9)
+            if (_totalPredictions >= 9)
             {
                 _hasMouseStates = true;
             }
+            
+            _totalPredictions++;
         }
 
+        _x.PushFront(deltaX);
+        _y.PushFront(deltaY);
+        
         if (_hasMouseStates)
         {
-            var xArray = _mouseStates.Select(state => state.x).ToArray();
-            var yArray = _mouseStates.Select(state => state.y).ToArray();
+            var xAverage = _x.Average();
+            var yAverage = _y.Average();
 
-            if (SameSign(xArray, 3, deltaX))
+            var overCorrectedX = !SameSign(_x, 3, deltaX);
+            var overCorrectedY = !SameSign(_y, 3, deltaY);
+
+            var predictionX = xAverage * (overCorrectedX ? -_correction : _correction);
+            var predictionY = yAverage * (overCorrectedY ? -_correction : _correction);
+
+            if (overCorrectedX)
             {
-                deltaX = (int) Math.Floor(deltaX * _correction);
+                predictionX = deltaX;
             }
 
-            if (SameSign(yArray, 3, deltaY))
+            if (overCorrectedY)
             {
-                deltaY = (int) Math.Floor(deltaY * _correction);
+                predictionY = deltaY;
             }
+
+            if (deltaX == 0)
+            {
+                predictionX = 0;
+            }
+
+            if (deltaY == 0)
+            {
+                predictionY = 0;
+            }
+
+            return (predictionX, predictionY);
         }
 
         return (deltaX, deltaY);
     }
 
-    private bool SameSign(double[] values, int length, double value, int offset = 0)
+    private bool SameSign(IEnumerable<double> values, int length, double value, int offset = 0)
     {
-        for (int i = offset; i < length; i++)
+        int i = 0;
+        foreach (var internalValue in values)
         {
-            if (values[i] > 0 != value > 0)
+            if (offset > 0 && i < offset)
+            {
+                i++;
+
+                continue;
+            }
+
+            if (internalValue > 0 != value > 0)
             {
                 return false;
+            } 
+
+            i++;
+
+            if (i >= offset + length)
+            {
+                break;
             }
         }
 
@@ -61,7 +102,10 @@ public class Prediction
 
     public void Reset()
     {
-        _mouseStates.Clear();
+        _x.Clear();
+        _y.Clear();
+        
+        _totalPredictions = 0;
         _hasMouseStates = false;
     }
 }

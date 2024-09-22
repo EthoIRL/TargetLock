@@ -48,7 +48,7 @@ class Program
     private const int BlueThreshold = 175;
 
     private static readonly bool UsePrediction = false;
-    private static readonly Prediction Predictor = new(1.4);
+    private static readonly Prediction Predictor = new(1.2, 9);
 
     private static readonly int StridePixels = Resolution.width * 4;
 
