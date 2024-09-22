@@ -1,6 +1,5 @@
 ﻿// #define DEBUG
 
-using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Drawing;
 using System.Net;
@@ -18,7 +17,7 @@ namespace TargetLock;
 class Program
 {
     // (500, 300)
-    private static readonly (int width, int height) Resolution = (300, 300);
+    private static readonly (int width, int height) Resolution = (250, 100);
 
     #if DEBUG
     private static readonly (int width, int height, Inter method) WindowResolution = new(896, 504, Inter.Nearest);
@@ -36,8 +35,8 @@ class Program
     private static readonly int SlowRadius = 50;
     private static readonly double SlowSpeed = 0.2;
 
-    private static readonly double SlowDivisorX = 1.5;
-    private static readonly double SlowDivisorY = 2;
+    private static readonly double SlowDivisorX = 1;
+    private static readonly double SlowDivisorY = 1;
 
     private static readonly int CenterMouseX = Resolution.width / 2;
     private static readonly int CenterMouseY = Resolution.height / 2;
@@ -54,7 +53,7 @@ class Program
     private static readonly int StridePixels = Resolution.width * 4;
 
     private static readonly Socket Socket = new(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-    private static readonly IPAddress Broadcast = IPAddress.Parse("192.168.68.59");
+    private static readonly IPAddress Broadcast = IPAddress.Parse("192.168.68.54");
     private static readonly IPEndPoint EndPoint = new(Broadcast, 7483);
 
     private static readonly Stopwatch ImageComputation = new();
@@ -115,7 +114,6 @@ class Program
             Parallel.For(0, Resolution.height, ParallelizationOptions, y =>
             {
                 byte* currentLine = (byte*) (ScreenCapturer.GpuImage.DataPointer + y * ScreenCapturer.GpuImage.RowPitch);
-                // Span<byte> currentLine = new Span<byte>((byte*)ScreenCapturer.GpuImage.DataPointer + y * ScreenCapturer.GpuImage.RowPitch, ScreenCapturer.GpuImage.RowPitch);
 
                 #if DEBUG
                 byte* grayLine = (byte*) (_grayImageDataPtr + y * GrayImage.MIplImage.WidthStep);

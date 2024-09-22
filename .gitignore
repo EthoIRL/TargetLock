@@ -5,6 +5,7 @@ libs
 
 # Rid1er
 .idea
+TargetLock.sln.DotSettings.user
 
 *.DotSettings
 global.json
