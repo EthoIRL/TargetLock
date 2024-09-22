@@ -1,8 +1,7 @@
 ﻿# Target Lock
 General purpose color aimbot (with the intent for BattleBit Remastered). Meant to be used in conjunction with [**Helious**](https://github.com/StrateimTech/Helious) for remote mouse movement injection.
 
-* Optimized for low latency calculations (~0.2ms / all calculations, Please note that this took up to ~3% gpu utilization on a 3060 Ti).
-* Debug window (OpenCV / EmguCV, **WILL** decrease performance due to it's  requirements).
+* Optimized for low latency calculations (~0.055ms ± 0.01ms / Capture & Calculation, with ~2% GPU utilization on a 4070 Ti Super)
 * Combining both [Helious](https://github.com/StrateimTech/Helious)' (anti recoil), and Target Lock aimbot recoil is effectively (+Horizontal) gone at least when locked on.
 
 ## Showcase
@@ -10,21 +9,19 @@ General purpose color aimbot (with the intent for BattleBit Remastered). Meant t
 _Showcased using OBS with an overlapping debug window_
 
 ## Features
-* Auto fire
-* Custom fov
-* Slowdown (Makes snapping less obvious; but maintains speed when on target)
-* Smoothing (Slowdown but all the time)
-* Basic Prediction (Motion acceleration)
+* Slowdown, [_Makes large snapping movements less obvious, but maintains speed when on target._]
+* Smoothing, [_Reduces movement speed statically to feel more legitimate_]
+* Prediction, [_Attempts to predict future movements (Not great, no ground truth)_]
+* Debug Window, [_OpenCV Window, (will decrease performance heavily)_]
 
 ## Known issues
-* #### Mouse acceleration must be turned off in windows (Enhance Pointer Precision), will cause overshooting/undershooting if enabled.
-* .NET causing high latency per image calculation during the first few minutes of startup (R2R is being used however it still seems to be an issue).
+* **Mouse acceleration must be turned off in windows (Enhance Pointer Precision), will cause overshooting/undershooting if enabled.**
+* .NET causing high latency per image calculation during the first few minutes of startup.
 * AOT compiling does NOT work with SharpDX.
 
 ## Battlebit issues
 * Playing long periods (_Alt tabbing? idk what causes this_) BattleBit causes GPU utilization to max; timings get thrown off everything is wack causing weird jitter within the Aimbot. This seems to be an independent issue with BattleBit itself. **You can fix it by setting fps to 30 and then back to your regular frame rate**, gpu utilization will go down.
-* Magnified scopes in BattleBit jitter if _**WaitForNewFrame**_ is off.
-* Locks onto USA arm patch, really annoying can't really do anything about it easily. (Might switch to Pink or Purple later on).
+* Locks onto USA arm patches when on specific maps.
 
 ## Setup
 Make sure to point to your remote [Helious](https://github.com/StrateimTech/Helious) installation.
@@ -47,8 +44,13 @@ dotnet publish -c Release -o publish
 * Windows 10 (11 is untested)
 * Dedicated GPU (Integrated untested)
 * Modified (High Performance UDP Server module) [Helious](https://github.com/StrateimTech/Helious) instance running a RPI4 or RPI5 connected via LAN.
-* .NET 8
+* .NET 9
 
-## Dependencies
-* SharpDX & DXGI Api (Outdated however still functions rather well in .NET 8)
+## Required Dependencies
+* SharpDX w/ D3D11 & D2D
+* CircularBuffer
+
+## Other Dependencies
+Only Needed for debug window
 * Emgu.CV
+* System.Drawing
