@@ -41,11 +41,11 @@ class Program
     private static readonly int CenterMouseX = Resolution.width / 2;
     private static readonly int CenterMouseY = Resolution.height / 2;
 
-    private const int RedTolerance = 130;
-    private const int GreenTolerance = 105;
-    private const int BlueMinimum = 230;
+    private const byte RedTolerance = 130;
+    private const byte GreenTolerance = 105;
+    private const byte BlueMinimum = 230;
 
-    private const int BlueThreshold = 175;
+    private const byte BlueThreshold = 175;
 
     private static readonly bool UsePrediction = false;
     private static readonly Prediction Predictor = new(1.2, 9);
@@ -111,51 +111,40 @@ class Program
 
         unsafe
         {
-            Parallel.For(0, Resolution.height, ParallelizationOptions, y =>
+            // When on target e.g. centered on capture window this algorithm will only calculate 50% of the total window search space.
+            // This works by indexing in reverse bottom-up, which finds the triangle-bottom in half the time.
+            // Meaning we see an improvement of up to 50% at least in comparision to synchronous searching.
+            
+            // (Sync vs Async Parallel method)
+            // 129% improvement when locked
+            // 67% deterioration when not locked
+            
+            for (int y = Resolution.height - 1; y >= 0; y--)
             {
-                byte* currentLine = (byte*) (ScreenCapturer.GpuImage.DataPointer + y * ScreenCapturer.GpuImage.RowPitch);
-
-                #if DEBUG
-                byte* grayLine = (byte*) (_grayImageDataPtr + y * GrayImage.MIplImage.WidthStep);
-                var imagePointerOffset = _localImageDataPtr + (y * LocalImage.MIplImage.WidthStep);
-                Utilities.CopyMemory(imagePointerOffset, (IntPtr) currentLine, StridePixels);
-                #endif
-
+                if (compute)
+                {
+                    break;
+                }
+                
                 for (int x = 0; x < StridePixels; x += 4)
                 {
+                    byte* currentLine = (byte*) (ScreenCapturer.GpuImage.DataPointer + y * ScreenCapturer.GpuImage.RowPitch);
+                    
                     byte red = currentLine[x + 2];
                     byte green = currentLine[x + 1];
                     byte blue = currentLine[x];
-
+            
                     var isBlue = IsBlue(red, green, blue);
-
+            
                     if (isBlue)
                     {
-                        if (!compute)
-                        {
-                            compute = true;
-                        }
-
-                        var distance = Math.Sqrt(Math.Pow(CenterMouseX - (x >> 2), 2) + Math.Pow(CenterMouseY - y, 2));
-
-                        if (distance - closest.distance <= 10 && y > closest.y)
-                        {
-                            closest = (x >> 2, y, distance);
-                        }
+                        closest = (x >> 2, y, 1);
+                        compute = true;
+            
+                        break;
                     }
-
-                    #if DEBUG
-                    if (isBlue)
-                    {
-                        grayLine[x >> 2] = 255;
-                    }
-                    else
-                    {
-                        grayLine[x >> 2] = 0;
-                    }
-                    #endif
                 }
-            });
+            }
         }
 
         #if DEBUG
