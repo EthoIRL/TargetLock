@@ -125,22 +125,22 @@ class Program
                 {
                     break;
                 }
-                
+
+                byte* currentLine = (byte*) (ScreenCapturer.GpuImage.DataPointer + y * ScreenCapturer.GpuImage.RowPitch);
+
                 for (int x = 0; x < StridePixels; x += 4)
                 {
-                    byte* currentLine = (byte*) (ScreenCapturer.GpuImage.DataPointer + y * ScreenCapturer.GpuImage.RowPitch);
-                    
                     byte red = currentLine[x + 2];
                     byte green = currentLine[x + 1];
                     byte blue = currentLine[x];
-            
+
                     var isBlue = IsBlue(red, green, blue);
-            
+
                     if (isBlue)
                     {
                         closest = (x >> 2, y, 1);
                         compute = true;
-            
+
                         break;
                     }
                 }
