@@ -58,6 +58,8 @@ class Program
     private static IntPtr _grayImageDataPtr;
     #endif
 
+    private static double _globalX;
+    private static double _globalY;
 
     [SupportedOSPlatform("windows")]
     static void Main(string[] args)
@@ -82,6 +84,18 @@ class Program
         _grayImageDataPtr = GCHandle.Alloc(GrayImage.Data, GCHandleType.Pinned).AddrOfPinnedObject();
         #endif
 
+        new Thread(() =>
+        {
+            while (true)
+            {
+                if (_globalX != 0 || _globalY != 0)
+                {
+                    Socket.Send(PreparePacket((short) _globalX, (short) _globalY));
+                    _globalX = 0;
+                    _globalY = 0;
+                }
+            }
+        }).Start();
         ScreenCapturer.StartCapture(0, 0, Resolution.width, Resolution.height);
     }
 
@@ -203,7 +217,8 @@ class Program
                 deltaY = predictions.deltaY;
             }
 
-            Task.Run(() => Socket.Send(PreparePacket((short) deltaX, (short) deltaY)));
+            _globalX = deltaX;
+            _globalY = deltaY;
         }
         else
         {
@@ -230,7 +245,7 @@ class Program
     {
         return new[]
         {
-            (byte)(deltaX & 0xFF), (byte)(deltaX >> 8), (byte)(deltaY & 0xFF), (byte)(deltaY >> 8)
+            (byte) (deltaX & 0xFF), (byte) (deltaX >> 8), (byte) (deltaY & 0xFF), (byte) (deltaY >> 8)
         };
     }
 }
