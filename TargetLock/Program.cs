@@ -23,14 +23,6 @@ class Program
     private static readonly (int width, int height, Inter method) WindowResolution = new(896, 504, Inter.Nearest);
     #endif
 
-    /// <summary>
-    /// Attempts to Sync to fps at the cost of latency for smoothness
-    /// </summary>
-    private static readonly bool WaitForNewFrame = false;
-
-    private static readonly int Fps = 300;
-    private static readonly double FpsInTicks = (1000.0 / Fps) * 10000.0;
-
     private static readonly bool Slowdown = false;
     private static readonly int SlowRadius = 50;
     private static readonly double SlowSpeed = 0.2;
@@ -56,9 +48,6 @@ class Program
     private static readonly IPAddress Broadcast = IPAddress.Parse("192.168.68.54");
     private static readonly IPEndPoint EndPoint = new(Broadcast, 7483);
 
-    private static readonly Stopwatch ImageComputation = new();
-    public static double ScreenshotSync;
-
     #if DEBUG
     private static readonly double WidthRatio = (double) WindowResolution.width / Resolution.width;
     private static readonly double HeightRatio = (double) WindowResolution.height / Resolution.height;
@@ -69,12 +58,6 @@ class Program
     private static IntPtr _grayImageDataPtr;
     #endif
 
-    private static readonly Stopwatch Waiter = new();
-
-    private static readonly ParallelOptions ParallelizationOptions = new()
-    {
-        MaxDegreeOfParallelism = Environment.ProcessorCount
-    };
 
     [SupportedOSPlatform("windows")]
     static void Main(string[] args)
@@ -105,8 +88,6 @@ class Program
     public static void HandleImage()
     {
         var compute = false;
-
-        ImageComputation.Restart();
         (int x, int y, double distance) closest = (0, -Int32.MaxValue, Double.MaxValue);
 
         unsafe
@@ -238,25 +219,6 @@ class Program
             _originalView = originalImage;
         }
         #endif
-
-        ImageComputation.Stop();
-
-        if (WaitForNewFrame)
-        {
-            var delayedSleep = FpsInTicks - ScreenshotSync - ImageComputation.ElapsedTicks - 50;
-
-            if (delayedSleep > 0)
-            {
-                Waiter.Restart();
-                while (true)
-                {
-                    if (Waiter.ElapsedTicks >= (int) delayedSleep)
-                    {
-                        break;
-                    }
-                }
-            }
-        }
     }
 
     private static bool IsBlue(byte red, byte green, byte blue)

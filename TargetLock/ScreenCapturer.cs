@@ -10,7 +10,6 @@ namespace TargetLock;
 #pragma warning disable CA1416
 public static class ScreenCapturer
 {
-    private static readonly Stopwatch ScWatch = new();
     private static readonly Stopwatch CwWatch = new();
     
     private static readonly List<long> Timings = new(1000000);
@@ -65,8 +64,6 @@ public static class ScreenCapturer
         
         while (true)
         {
-            ScWatch.Restart();
-
             if (previousState)
             {
                 outputDuplication.ReleaseFrame();
@@ -89,8 +86,6 @@ public static class ScreenCapturer
             
             deviceContext.CopySubresourceRegion(texturePtr, 0, resourceRegion, texture2D, 0);
 
-            Program.ScreenshotSync = ScWatch.ElapsedTicks;
-            ScWatch.Stop();
             CwWatch.Restart();
             Program.HandleImage();
             CwWatch.Stop();
@@ -100,16 +95,6 @@ public static class ScreenCapturer
             if (!CwWatch.IsRunning)
             {
                 TimingsCw.Add(CwWatch.ElapsedTicks);
-            }
-            
-            if (!ScWatch.IsRunning)
-            {
-                Timings.Add(ScWatch.ElapsedTicks);
-            }
-
-            if (Timings.Count != 0 && Timings.Count % 100 == 0)
-            {
-                Console.WriteLine($"Timings SC Avg: ({Timings.Average() / 10000.0}, {Timings.Count})");
             }
             
             if (TimingsCw.Count != 0 && TimingsCw.Count % 100 == 0)
