@@ -99,9 +99,8 @@ class Program
         ScreenCapturer.StartCapture(0, 0, Resolution.width, Resolution.height);
     }
 
-    public static void HandleImage()
+    public static void HandleImage(ref bool compute)
     {
-        var compute = false;
         (int x, int y, double distance) closest = (0, -Int32.MaxValue, Double.MaxValue);
 
         unsafe

@@ -12,7 +12,6 @@ public static class ScreenCapturer
 {
     private static readonly Stopwatch CwWatch = new();
     
-    private static readonly List<long> Timings = new(1000000);
     private static readonly List<long> TimingsCw = new(1000000);
 
     public static DataBox GpuImage;
@@ -87,12 +86,12 @@ public static class ScreenCapturer
             deviceContext.CopySubresourceRegion(texturePtr, 0, resourceRegion, texture2D, 0);
 
             CwWatch.Restart();
-            Program.HandleImage();
+            bool compute = false;
+            Program.HandleImage(ref compute);
+            screenResource.Dispose();
             CwWatch.Stop();
 
-            screenResource.Dispose();
-
-            if (!CwWatch.IsRunning)
+            if (compute && !CwWatch.IsRunning)
             {
                 TimingsCw.Add(CwWatch.ElapsedTicks);
             }
