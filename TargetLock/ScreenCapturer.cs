@@ -68,10 +68,10 @@ public static class ScreenCapturer
                 outputDuplication.ReleaseFrame();
             }
 
-            var status = outputDuplication.TryAcquireNextFrame(0, out var data, out var screenResource);
+            var status = outputDuplication.TryAcquireNextFrame(1, out var data, out var screenResource);
             previousState = status.Success;
 
-            if (screenResource == null || data.LastPresentTime == 0)
+            if (data.LastPresentTime == 0 || screenResource == null)
             {
                 continue;
             }
