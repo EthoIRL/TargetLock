@@ -1,6 +1,5 @@
 ﻿// #define DEBUG
 
-using System.Diagnostics;
 using System.Drawing;
 using System.Net;
 using System.Net.Sockets;
@@ -9,7 +8,6 @@ using System.Runtime.Versioning;
 using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
-using SharpDX;
 
 namespace TargetLock;
 
@@ -99,21 +97,15 @@ class Program
         ScreenCapturer.StartCapture(0, 0, Resolution.width, Resolution.height);
     }
 
+    private const int HeightStep = 5;
+    
     public static void HandleImage(ref bool compute)
     {
         (int x, int y, double distance) closest = (0, -Int32.MaxValue, Double.MaxValue);
 
         unsafe
         {
-            // When on target e.g. centered on capture window this algorithm will only calculate 50% of the total window search space.
-            // This works by indexing in reverse bottom-up, which finds the triangle-bottom in half the time.
-            // Meaning we see an improvement of up to 50% at least in comparision to synchronous searching.
-            
-            // (Sync vs Async Parallel method)
-            // 129% improvement when locked
-            // 67% deterioration when not locked
-            
-            for (int y = Resolution.height - 1; y >= 0; y--)
+            for (int y = Resolution.height - 1; y >= 0; y -= HeightStep)
             {
                 if (compute)
                 {
@@ -122,37 +114,54 @@ class Program
 
                 byte* currentLine = (byte*) (ScreenCapturer.GpuImage.DataPointer + y * ScreenCapturer.GpuImage.RowPitch);
 
-                for (int x = StridePixels / 2; x >= 0; x -= 4)
+                for (int x = 0; x <= StridePixels; x += 4)
                 {
-                    byte red = currentLine[x + 2];
-                    byte green = currentLine[x + 1];
-                    byte blue = currentLine[x];
-                
-                    var isBlue = IsBlue(red, green, blue);
-                
-                    if (isBlue)
+                    if (compute)
                     {
-                        closest = (x >> 2, y, 1);
-                        compute = true;
-                
                         break;
                     }
-                }
-                
-                for (int x = StridePixels / 2; x <= StridePixels; x += 4)
-                {
+
                     byte red = currentLine[x + 2];
                     byte green = currentLine[x + 1];
                     byte blue = currentLine[x];
 
                     var isBlue = IsBlue(red, green, blue);
 
-                    if (isBlue)
+                    if (!isBlue)
                     {
-                        closest = (x >> 2, y, 1);
-                        compute = true;
+                        continue;
+                    }
 
-                        break;
+                    for (int i = HeightStep; i >= 0; i--)
+                    {
+                        if (compute)
+                        {
+                            break;
+                        }
+
+                        byte* offsetLine = (byte*) (ScreenCapturer.GpuImage.DataPointer + (y + i) * ScreenCapturer.GpuImage.RowPitch);
+
+                        for (int x2 = StridePixels / 2; x2 >= 0; x2 -= 4)
+                        {
+                            if (IsBlue(offsetLine[x2 + 2], offsetLine[x2 + 1], offsetLine[x2]))
+                            {
+                                closest = (x2 >> 2, y + i, 1);
+                                compute = true;
+
+                                break;
+                            }
+                        }
+
+                        for (int x2 = StridePixels / 2; x2 <= StridePixels; x2 += 4)
+                        {
+                            if (IsBlue(offsetLine[x2 + 2], offsetLine[x2 + 1], offsetLine[x2]))
+                            {
+                                closest = (x2 >> 2, y + i, 1);
+                                compute = true;
+
+                                break;
+                            }
+                        }
                     }
                 }
             }
