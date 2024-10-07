@@ -1,13 +1,6 @@
-﻿// #define DEBUG
-
-using System.Drawing;
-using System.Net;
+﻿using System.Net;
 using System.Net.Sockets;
-using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
-using Emgu.CV;
-using Emgu.CV.CvEnum;
-using Emgu.CV.Structure;
 
 namespace TargetLock;
 
@@ -16,10 +9,6 @@ class Program
 {
     // (500, 300)
     private static readonly (int width, int height) Resolution = (250, 100);
-
-    #if DEBUG
-    private static readonly (int width, int height, Inter method) WindowResolution = new(896, 504, Inter.Nearest);
-    #endif
 
     private static readonly bool Slowdown = false;
     private static readonly int SlowRadius = 50;
@@ -46,16 +35,6 @@ class Program
     private static readonly IPAddress Broadcast = IPAddress.Parse("192.168.68.54");
     private static readonly IPEndPoint EndPoint = new(Broadcast, 7483);
 
-    #if DEBUG
-    private static readonly double WidthRatio = (double) WindowResolution.width / Resolution.width;
-    private static readonly double HeightRatio = (double) WindowResolution.height / Resolution.height;
-    private static readonly Image<Bgra, byte> LocalImage = new(Resolution.width, Resolution.height);
-    private static IntPtr _localImageDataPtr;
-    private static Image<Bgra, byte> _originalView = new(Resolution.width, Resolution.height);
-    private static readonly Image<Gray, byte> GrayImage = new(Resolution.width, Resolution.height);
-    private static IntPtr _grayImageDataPtr;
-    #endif
-
     private static double _globalX;
     private static double _globalY;
 
@@ -63,24 +42,6 @@ class Program
     static void Main(string[] args)
     {
         Socket.Connect(EndPoint);
-        #if DEBUG
-        new Thread(() =>
-        {
-            while (true)
-            {
-                if (_originalView is {Data: { }})
-                {
-                    CvInvoke.Imshow("Original View", _originalView);
-                }
-
-                CvInvoke.Imshow("Filtered View", GrayImage);
-                CvInvoke.WaitKey(1);
-            }
-        }).Start();
-
-        _localImageDataPtr = GCHandle.Alloc(LocalImage.Data, GCHandleType.Pinned).AddrOfPinnedObject();
-        _grayImageDataPtr = GCHandle.Alloc(GrayImage.Data, GCHandleType.Pinned).AddrOfPinnedObject();
-        #endif
 
         new Thread(() =>
         {
@@ -167,10 +128,6 @@ class Program
             }
         }
 
-        #if DEBUG
-        Image<Bgra, byte> originalImage = LocalImage.Resize(WindowResolution.width, WindowResolution.height, WindowResolution.method);
-        #endif
-
         if (compute && closest.y != -Int32.MaxValue)
         {
             double deltaX = closest.x - CenterMouseX;
@@ -178,11 +135,6 @@ class Program
 
             deltaX /= SlowDivisorX;
             deltaY /= SlowDivisorY;
-
-            #if DEBUG
-            CvInvoke.Line(originalImage, new Point(WindowResolution.width / 2, WindowResolution.height / 2),
-                new Point((int) ((closest.x) * WidthRatio), (int) (closest.y * HeightRatio)), new MCvScalar(255, 255, 0));
-            #endif
 
             if (Slowdown)
             {
@@ -212,15 +164,6 @@ class Program
                 //     Console.WriteLine($"PDeltaX: {predictions.deltaX} | PDeltaY: {predictions.deltaY}");
                 // });
 
-                #if DEBUG
-                CvInvoke.Line(originalImage, new Point(WindowResolution.width / 2, WindowResolution.height / 2),
-                    new Point((int) ((predictions.deltaX + CenterMouseX) * WidthRatio), (int) ((predictions.deltaY + CenterMouseY) * HeightRatio)),
-                    new MCvScalar(107, 255, 50));
-                CvInvoke.Circle(originalImage, new Point((int) ((predictions.deltaX + CenterMouseX) * WidthRatio), (int) ((predictions.deltaY + CenterMouseY) * HeightRatio)),
-                    2,
-                    new MCvScalar(255, 255, 255), 4, LineType.Filled);
-                #endif
-
                 deltaX = predictions.deltaX;
                 deltaY = predictions.deltaY;
             }
@@ -235,13 +178,6 @@ class Program
                 Predictor.Reset();
             }
         }
-
-        #if DEBUG
-        if (originalImage != null)
-        {
-            _originalView = originalImage;
-        }
-        #endif
     }
 
     private static bool IsBlue(byte red, byte green, byte blue)
