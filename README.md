@@ -1,7 +1,7 @@
 ﻿# Target Lock
 General purpose color aimbot (with the intent for BattleBit Remastered). Meant to be used in conjunction with [**Helious**](https://github.com/StrateimTech/Helious) for remote mouse movement injection.
 
-* Optimized for low latency calculations (~0.055ms ± 0.01ms / Capture & Calculation, with ~2% GPU utilization on a 4070 Ti Super)
+* Optimized for low latency calculations (~0.004ms ± 0.01ms / Capture & Calculation, with ~2% GPU utilization on a 4070 Ti Super)
 * Combining both [Helious](https://github.com/StrateimTech/Helious)' (anti recoil), and Target Lock aimbot recoil is effectively (+Horizontal) gone at least when locked on.
 
 ## Showcase
@@ -9,15 +9,15 @@ General purpose color aimbot (with the intent for BattleBit Remastered). Meant t
 _Showcased using OBS with an overlapping debug window_
 
 ## Features
-* Slowdown, [_Makes large snapping movements less obvious, but maintains speed when on target._]
-* Smoothing, [_Reduces movement speed statically to feel more legitimate_]
-* Prediction, [_Attempts to predict future movements (Not great, no ground truth)_]
-* Debug Window, [_OpenCV Window, (will decrease performance heavily)_]
+* Slowdown [_Makes large snapping movements less obvious, but maintains speed when on target._]
+* Smoothing [_Reduces movement speed statically to feel more legitimate_]
+* Prediction [_Attempts to predict future movements (Not great, no ground truth)_]
 
 ## Known issues
 * **Mouse acceleration must be turned off in windows (Enhance Pointer Precision), will cause overshooting/undershooting if enabled.**
 * .NET causing high latency per image calculation during the first few minutes of startup.
 * AOT compiling does NOT work with SharpDX.
+* DirectX can only outputs the monitor's refresh rate (e.g. 144hz monitor, +240hz game)
 
 ## Battlebit issues
 * Playing long periods (_Alt tabbing? idk what causes this_) BattleBit causes GPU utilization to max; timings get thrown off everything is wack causing weird jitter within the Aimbot. This seems to be an independent issue with BattleBit itself. **You can fix it by setting fps to 30 and then back to your regular frame rate**, gpu utilization will go down.
@@ -49,8 +49,3 @@ dotnet publish -c Release -o publish
 ## Required Dependencies
 * SharpDX w/ D3D11 & D2D
 * CircularBuffer
-
-## Other Dependencies
-Only Needed for debug window
-* Emgu.CV
-* System.Drawing
