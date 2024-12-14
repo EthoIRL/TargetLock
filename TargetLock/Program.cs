@@ -131,7 +131,8 @@ class Program
         if (compute && closest.y != -Int32.MaxValue)
         {
             double deltaX = closest.x - CenterMouseX;
-            double deltaY = closest.y - CenterMouseY + 1;
+            double deltaY = closest.y - CenterMouseY; 
+            // + 1
 
             deltaX /= SlowDivisorX;
             deltaY /= SlowDivisorY;
