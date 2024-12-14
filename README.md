@@ -1,5 +1,5 @@
 ﻿# Target Lock
-General purpose color aimbot (with the intent for BattleBit Remastered). Meant to be used in conjunction with [**Helious**](https://github.com/StrateimTech/Helious) for remote mouse movement injection.
+General purpose color aimbot. Meant to be used in conjunction with [**Helious**](https://github.com/StrateimTech/Helious) for remote mouse movement injection.
 
 * Optimized for low latency calculations (~0.004ms ± 0.01ms / Capture & Calculation, with ~2% GPU utilization on a 4070 Ti Super)
 * Combining both [Helious](https://github.com/StrateimTech/Helious)' (anti recoil), and Target Lock aimbot recoil is effectively (+Horizontal) gone at least when locked on.
@@ -23,7 +23,7 @@ _Showcased using OBS with an overlapping debug window_
 * Playing long periods (_Alt tabbing? idk what causes this_) BattleBit causes GPU utilization to max; timings get thrown off everything is wack causing weird jitter within the Aimbot. This seems to be an independent issue with BattleBit itself. **You can fix it by setting fps to 30 and then back to your regular frame rate**, gpu utilization will go down.
 * Locks onto USA arm patches when on specific maps.
 
-## Setup
+## Helious setup
 Make sure to point to your remote [Helious](https://github.com/StrateimTech/Helious) installation.
 By default the port is 7483.
 ```c#
@@ -35,6 +35,13 @@ Publish for [R2R](https://learn.microsoft.com/en-us/dotnet/core/deploying/ready-
 ``
 dotnet publish -c Release -o publish
 ``
+
+## Non-helious setup
+You'll need to write your own mouse injector/mover, replace all occurrences of PreparePacket
+```rust
+byte[] PreparePacket(short deltaX, short deltaY)
+```
+
 ## BBR Game Configuration
 * Change ``Enemy Color`` to ``(0, 0, 255)`` (BLUE) in Gameplay -> Enemy Color.
 * Change ``Enemy Icon Size`` to ``4.0`` in Gameplay -> Enemy Color (This is below Friendly Color & Icon size; blame BattleBit).
