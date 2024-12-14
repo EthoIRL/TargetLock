@@ -10,8 +10,9 @@ namespace TargetLock;
 #pragma warning disable CA1416
 public static class ScreenCapturer
 {
-    private static readonly Stopwatch ScWatch = new();
-    private static readonly List<long> Timings = new();
+    private static readonly Stopwatch CwWatch = new();
+    
+    private static readonly List<long> TimingsCw = new(1000000);
 
     public static DataBox GpuImage;
 
@@ -51,7 +52,7 @@ public static class ScreenCapturer
         using Texture2D texture2D = new Texture2D(device, texture2DDescription);
         using OutputDuplication outputDuplication = output1.DuplicateOutput(device);
 
-        GpuImage = device.ImmediateContext.MapSubresource(texture2D, 0, MapMode.Read, MapFlags.None);
+        GpuImage = deviceContext.MapSubresource(texture2D, 0, MapMode.Read, MapFlags.None);
 
         ResourceRegion resourceRegion = new ResourceRegion(centerWidth, centerHeight, 0, centerWidth + outputWidth, centerHeight + outputHeight, 1);
         
@@ -62,17 +63,15 @@ public static class ScreenCapturer
         
         while (true)
         {
-            ScWatch.Restart();
-
             if (previousState)
             {
                 outputDuplication.ReleaseFrame();
             }
 
-            var status = outputDuplication.TryAcquireNextFrame(0, out var data, out var screenResource);
+            var status = outputDuplication.TryAcquireNextFrame(1, out var data, out var screenResource);
             previousState = status.Success;
 
-            if (screenResource == null || data.LastPresentTime == 0)
+            if (data.LastPresentTime == 0 || screenResource == null)
             {
                 continue;
             }
@@ -86,21 +85,20 @@ public static class ScreenCapturer
             
             deviceContext.CopySubresourceRegion(texturePtr, 0, resourceRegion, texture2D, 0);
 
-            Program.ScreenshotSync = ScWatch.ElapsedTicks;
-            Program.HandleImage();
-
+            CwWatch.Restart();
+            bool compute = false;
+            Program.HandleImage(ref compute);
             screenResource.Dispose();
+            CwWatch.Stop();
 
-            ScWatch.Stop();
-
-            if (!ScWatch.IsRunning)
+            if (compute && !CwWatch.IsRunning)
             {
-                Timings.Add(ScWatch.ElapsedTicks);
+                TimingsCw.Add(CwWatch.ElapsedTicks);
             }
-
-            if (Timings.Count != 0 && Timings.Count % 100 == 0)
+            
+            if (TimingsCw.Count != 0 && TimingsCw.Count % 100 == 0)
             {
-                Console.WriteLine($"Timings SC Avg: ({Timings.Average() / 10000.0}, {Timings.Count})");
+                Console.WriteLine($"Timings CAL Avg: ({TimingsCw.Average() / 10000.0}, {TimingsCw.Count})");
             }
         }
     }
