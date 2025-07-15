@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Runtime.InteropServices;
 using SharpDX;
 using SharpDX.Direct3D11;
 using SharpDX.DXGI;
@@ -15,18 +16,33 @@ public static class ScreenCapturer
     private static readonly List<long> TimingsCw = new(1000000);
 
     public static DataBox GpuImage;
+    
+    [DllImport("user32.dll", SetLastError = true)]
+    internal static extern bool SetProcessDpiAwarenessContext(int dpiFlag);
+
+    internal enum DPI_AWARENESS_CONTEXT
+    {
+        DPI_AWARENESS_CONTEXT_UNAWARE = 16,
+        DPI_AWARENESS_CONTEXT_SYSTEM_AWARE = 17,
+        DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE = 18,
+        DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 = 34
+    }
 
     public static void StartCapture(Int32 adapterIndex, Int32 displayIndex, int outputWidth, int outputHeight)
     {
-        using Factory1 factory1 = new Factory1();
-        using Adapter1 adapter1 = factory1.GetAdapter1(adapterIndex);
-        using Device device = new Device(adapter1);
-        using DeviceContext deviceContext = device.ImmediateContext;
-        using Output output = adapter1.GetOutput(displayIndex);
-        using Output1 output1 = output.QueryInterface<Output1>();
+        SetProcessDpiAwarenessContext((int)DPI_AWARENESS_CONTEXT.DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 
-        Int32 width = output1.Description.DesktopBounds.Right - output1.Description.DesktopBounds.Left;
-        Int32 height = output1.Description.DesktopBounds.Bottom - output1.Description.DesktopBounds.Top;
+        var factory = new Factory1();
+        var adapter = factory.GetAdapter1(0);
+        var output = adapter.GetOutput(0);
+
+        Output5 output5 = output.QueryInterface<Output5>();
+        
+        using Device device = new Device(adapter);
+        using DeviceContext deviceContext = device.ImmediateContext;
+
+        Int32 width = output5.Description.DesktopBounds.Right - output5.Description.DesktopBounds.Left;
+        Int32 height = output5.Description.DesktopBounds.Bottom - output5.Description.DesktopBounds.Top;
 
         int centerWidth = width / 2 - outputWidth / 2;
         int centerHeight = height / 2 - outputHeight / 2;
@@ -35,6 +51,8 @@ public static class ScreenCapturer
         {
             CpuAccessFlags = CpuAccessFlags.Read,
             BindFlags = BindFlags.None,
+            // 32 bit ( 8 + 8 + 8 + 8 = 4)
+            // 64 bit ( 8 + 8 + 8 + 8 + 8 + 8 + 8 + 8 = 8)
             Format = Format.B8G8R8A8_UNorm,
             Width = outputWidth,
             Height = outputHeight,
@@ -50,7 +68,8 @@ public static class ScreenCapturer
         };
 
         using Texture2D texture2D = new Texture2D(device, texture2DDescription);
-        using OutputDuplication outputDuplication = output1.DuplicateOutput(device);
+        // using OutputDuplication outputDuplication = output5.DuplicateOutput1(device, 1, 1, [Format.R10G10B10A2_UNorm]);
+        using OutputDuplication outputDuplication = output5.DuplicateOutput1(device, 1, 1, [Format.B8G8R8A8_UNorm]);
 
         GpuImage = deviceContext.MapSubresource(texture2D, 0, MapMode.Read, MapFlags.None);
 
@@ -68,7 +87,7 @@ public static class ScreenCapturer
                 outputDuplication.ReleaseFrame();
             }
 
-            var status = outputDuplication.TryAcquireNextFrame(1, out var data, out var screenResource);
+            var status = outputDuplication.TryAcquireNextFrame(0, out var data, out var screenResource);
             previousState = status.Success;
 
             if (data.LastPresentTime == 0 || screenResource == null)
