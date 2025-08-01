@@ -1,7 +1,7 @@
 ﻿# Target Lock
 General purpose color aimbot. Meant to be used in conjunction with [**Helious**](https://github.com/StrateimTech/Helious) for remote mouse movement injection.
 
-* Optimized for low latency calculations (~0.004ms ± 0.01ms / Capture & Calculation, with ~2% GPU utilization on a 4070 Ti Super)
+* Optimized for low latency calculations (~0.003ms ± 0.001ms / Capture & Calculation, with ~2% GPU utilization on a 4070 Ti Super)
 * Combining both [Helious](https://github.com/StrateimTech/Helious)' (anti recoil), and Target Lock aimbot recoil is effectively (+Horizontal) gone at least when locked on.
 
 ## Showcase
