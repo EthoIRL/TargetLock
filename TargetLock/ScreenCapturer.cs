@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using SharpDX;
 using SharpDX.Direct3D11;
 using SharpDX.DXGI;
@@ -11,16 +10,12 @@ namespace TargetLock;
 #pragma warning disable CA1416
 public static class ScreenCapturer
 {
-    private static readonly Stopwatch CwWatch = new();
-    
-    private static readonly List<long> TimingsCw = new(1000000);
-
     public static DataBox GpuImage;
     
     [DllImport("user32.dll", SetLastError = true)]
-    internal static extern bool SetProcessDpiAwarenessContext(int dpiFlag);
+    private static extern bool SetProcessDpiAwarenessContext(int dpiFlag);
 
-    internal enum DPI_AWARENESS_CONTEXT
+    private enum DPI_AWARENESS_CONTEXT
     {
         DPI_AWARENESS_CONTEXT_UNAWARE = 16,
         DPI_AWARENESS_CONTEXT_SYSTEM_AWARE = 17,
@@ -33,8 +28,8 @@ public static class ScreenCapturer
         SetProcessDpiAwarenessContext((int)DPI_AWARENESS_CONTEXT.DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 
         var factory = new Factory1();
-        var adapter = factory.GetAdapter1(0);
-        var output = adapter.GetOutput(0);
+        var adapter = factory.GetAdapter1(adapterIndex);
+        var output = adapter.GetOutput(displayIndex);
 
         Output5 output5 = output.QueryInterface<Output5>();
         
@@ -51,8 +46,6 @@ public static class ScreenCapturer
         {
             CpuAccessFlags = CpuAccessFlags.Read,
             BindFlags = BindFlags.None,
-            // 32 bit ( 8 + 8 + 8 + 8 = 4)
-            // 64 bit ( 8 + 8 + 8 + 8 + 8 + 8 + 8 + 8 = 8)
             Format = Format.B8G8R8A8_UNorm,
             Width = outputWidth,
             Height = outputHeight,
@@ -68,7 +61,6 @@ public static class ScreenCapturer
         };
 
         using Texture2D texture2D = new Texture2D(device, texture2DDescription);
-        // using OutputDuplication outputDuplication = output5.DuplicateOutput1(device, 1, 1, [Format.R10G10B10A2_UNorm]);
         using OutputDuplication outputDuplication = output5.DuplicateOutput1(device, 1, 1, [Format.B8G8R8A8_UNorm]);
 
         GpuImage = deviceContext.MapSubresource(texture2D, 0, MapMode.Read, MapFlags.None);
@@ -92,6 +84,7 @@ public static class ScreenCapturer
 
             if (data.LastPresentTime == 0 || screenResource == null)
             {
+                screenResource?.Dispose();
                 continue;
             }
 
@@ -104,21 +97,8 @@ public static class ScreenCapturer
             
             deviceContext.CopySubresourceRegion(texturePtr, 0, resourceRegion, texture2D, 0);
 
-            CwWatch.Restart();
-            bool compute = false;
-            Program.HandleImage(ref compute);
+            Program.HandleImage();
             screenResource.Dispose();
-            CwWatch.Stop();
-
-            if (compute && !CwWatch.IsRunning)
-            {
-                TimingsCw.Add(CwWatch.ElapsedTicks);
-            }
-            
-            if (TimingsCw.Count != 0 && TimingsCw.Count % 100 == 0)
-            {
-                Console.WriteLine($"Timings CAL Avg: ({TimingsCw.Average() / 10000.0}, {TimingsCw.Count})");
-            }
         }
     }
 }

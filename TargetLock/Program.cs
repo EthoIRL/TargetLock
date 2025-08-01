@@ -1,5 +1,9 @@
-﻿using System.Net;
+﻿using System.Diagnostics;
+using System.Net;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
+using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.X86;
 using System.Runtime.Versioning;
 
 namespace TargetLock;
@@ -13,9 +17,6 @@ class Program
     private static readonly bool Slowdown = false;
     private static readonly int SlowRadius = 50;
     private static readonly double SlowSpeed = 0.2;
-
-    private static readonly double SlowDivisorX = 1;
-    private static readonly double SlowDivisorY = 1;
 
     private static readonly int CenterMouseX = Resolution.width / 2;
     private static readonly int CenterMouseY = Resolution.height / 2;
@@ -32,12 +33,35 @@ class Program
     private static readonly int StridePixels = Resolution.width * 4;
 
     private static readonly Socket Socket = new(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-    private static readonly IPAddress Broadcast = IPAddress.Parse("192.168.68.54");
+    private static readonly IPAddress Broadcast = IPAddress.Parse("192.168.68.68");
     private static readonly IPEndPoint EndPoint = new(Broadcast, 7483);
 
     private static double _globalX;
     private static double _globalY;
 
+    private static readonly Vector256<short> BlueThresholdVec = Vector256.Create((short)BlueThreshold);
+    private static readonly Vector256<short> GreenToleranceVec = Vector256.Create((short)GreenTolerance);
+    private static readonly Vector256<short> RedToleranceVec = Vector256.Create((short)RedTolerance);
+    private static readonly Vector256<short> BlueMinimumVec = Vector256.Create((short)BlueMinimum);
+
+    private static readonly Vector256<byte> BlueShuffleMask = Vector256.Create(
+        0, 4, 8, 12, 16, 20, 24, 28,
+        0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+        0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+        0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF);
+    
+    private static readonly Vector256<byte> GreenShuffleMask = Vector256.Create(
+        1, 5, 9, 13, 17, 21, 25, 29,
+        0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+        0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+        0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF);
+    
+    private static readonly Vector256<byte> RedShuffleMask = Vector256.Create(
+        2, 6, 10, 14, 18, 22, 26, 30,
+        0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+        0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+        0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF);
+    
     [SupportedOSPlatform("windows")]
     static void Main(string[] args)
     {
@@ -55,143 +79,149 @@ class Program
                 }
             }
         }).Start();
+        Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.High;
         ScreenCapturer.StartCapture(0, 0, Resolution.width, Resolution.height);
     }
 
     private const int HeightStep = 5;
     
-    public static void HandleImage(ref bool compute)
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static void HandleImage()
     {
-        (int x, int y, double distance) closest = (0, -Int32.MaxValue, Double.MaxValue);
-
         unsafe
         {
             for (int y = Resolution.height - 1; y >= 0; y -= HeightStep)
             {
-                if (compute)
+                byte* currentLine = (byte*)(ScreenCapturer.GpuImage.DataPointer + y * ScreenCapturer.GpuImage.RowPitch);
+                
+                for (int x = 0; x <= StridePixels - 32; x += 32)
                 {
-                    break;
-                }
-
-                byte* currentLine = (byte*) (ScreenCapturer.GpuImage.DataPointer + y * ScreenCapturer.GpuImage.RowPitch);
-
-                for (int x = 0; x <= StridePixels; x += 4)
-                {
-                    if (compute)
-                    {
-                        break;
-                    }
-
-                    byte red = currentLine[x + 2];
-                    byte green = currentLine[x + 1];
-                    byte blue = currentLine[x];
-
-                    var isBlue = IsBlue(red, green, blue);
-
-                    if (!isBlue)
+                    Vector256<byte> pixelData = Avx.LoadAlignedVector256(currentLine + x);
+                
+                    if (!IsBlueAvx2(pixelData))
                     {
                         continue;
                     }
 
                     for (int i = HeightStep; i >= 0; i--)
                     {
-                        if (compute)
+                        byte* offsetLine = currentLine + i * ScreenCapturer.GpuImage.RowPitch;
+                        
+                        for (int x2 = 0; x2 <= StridePixels - 32; x2 += 32)
                         {
-                            break;
-                        }
-
-                        byte* offsetLine = (byte*) (ScreenCapturer.GpuImage.DataPointer + (y + i) * ScreenCapturer.GpuImage.RowPitch);
-
-                        for (int x2 = StridePixels / 2; x2 >= 0; x2 -= 4)
-                        {
-                            if (IsBlue(offsetLine[x2 + 2], offsetLine[x2 + 1], offsetLine[x2]))
+                            Vector256<byte> pixelData2 = Avx.LoadAlignedVector256(offsetLine + x2);
+                        
+                            if (!IsBlueAvx2(pixelData2))
                             {
-                                closest = (x2 >> 2, y + i, 1);
-                                compute = true;
-
-                                break;
+                                continue;
                             }
-                        }
-
-                        for (int x2 = StridePixels / 2; x2 <= StridePixels; x2 += 4)
-                        {
-                            if (IsBlue(offsetLine[x2 + 2], offsetLine[x2 + 1], offsetLine[x2]))
+                            
+                            int x3 = 0;
+                            if (x2 > 0)
                             {
-                                closest = (x2 >> 2, y + i, 1);
-                                compute = true;
-
-                                break;
+                                x3 = x2 - 32;
+                            }
+                            
+                            for (; x3 <= StridePixels; x3 += 4)
+                            {
+                                if (IsBlue(offsetLine[x3 + 2], offsetLine[x3 + 1], offsetLine[x3]))
+                                {
+                                    HandleMovements(x3 >> 2, y + i);
+                                    return;
+                                }
                             }
                         }
                     }
                 }
             }
         }
-
-        if (compute && closest.y != -Int32.MaxValue)
+        
+        if (UsePrediction)
         {
-            double deltaX = closest.x - CenterMouseX;
-            double deltaY = closest.y - CenterMouseY; 
-            // + 1
-
-            deltaX /= SlowDivisorX;
-            deltaY /= SlowDivisorY;
-
-            if (Slowdown)
-            {
-                if (Math.Abs(deltaX) > SlowRadius)
-                {
-                    deltaX = (int) Math.Floor(deltaX * SlowSpeed);
-                }
-
-                if (Math.Abs(deltaY) > SlowRadius)
-                {
-                    deltaY = (int) Math.Floor(deltaY * SlowSpeed);
-                }
-            }
-
-            if (UsePrediction)
-            {
-                if (Math.Abs(deltaX) > 50 || Math.Abs(deltaY) > 50)
-                {
-                    Predictor.Reset();
-                }
-
-                var predictions = Predictor.HandlePredictions(deltaX, deltaY);
-
-                // Task.Run(() =>
-                // {
-                //     Console.WriteLine($"DeltaX: {deltaX} | DeltaY: {deltaY}");
-                //     Console.WriteLine($"PDeltaX: {predictions.deltaX} | PDeltaY: {predictions.deltaY}");
-                // });
-
-                deltaX = predictions.deltaX;
-                deltaY = predictions.deltaY;
-            }
-
-            _globalX = deltaX;
-            _globalY = deltaY;
-        }
-        else
-        {
-            if (UsePrediction)
-            {
-                Predictor.Reset();
-            }
+            Predictor.Reset();
         }
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    private static void HandleMovements(int offsetX, int offsetY)
+    {
+        double deltaX = offsetX - CenterMouseX;
+        double deltaY = offsetY - CenterMouseY;
+
+        deltaX /= 2;
+        deltaY /= 2;
+
+        if (Slowdown)
+        {
+            if (Math.Abs(deltaX) > SlowRadius)
+            {
+                deltaX = (int) Math.Floor(deltaX * SlowSpeed);
+            }
+
+            if (Math.Abs(deltaY) > SlowRadius)
+            {
+                deltaY = (int) Math.Floor(deltaY * SlowSpeed);
+            }
+        }
+
+        if (UsePrediction)
+        {
+            if (Math.Abs(deltaX) > 50 || Math.Abs(deltaY) > 50)
+            {
+                Predictor.Reset();
+            }
+
+            var predictions = Predictor.HandlePredictions(deltaX, deltaY);
+
+            deltaX = predictions.deltaX;
+            deltaY = predictions.deltaY;
+        }
+
+        _globalX = deltaX;
+        _globalY = deltaY;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    private static bool IsBlueAvx2(Vector256<byte> pixelData)
+    {
+        Vector128<byte> blueLow = Avx2.Shuffle(pixelData, BlueShuffleMask).GetLower();
+        Vector128<byte> greenLow = Avx2.Shuffle(pixelData, GreenShuffleMask).GetLower();
+        Vector128<byte> redLow = Avx2.Shuffle(pixelData, RedShuffleMask).GetLower();
+                    
+        Vector256<short> blue16 = Avx2.ConvertToVector256Int16(blueLow);
+        Vector256<short> green16 = Avx2.ConvertToVector256Int16(greenLow);
+        Vector256<short> red16 = Avx2.ConvertToVector256Int16(redLow);
+                    
+        Vector256<short> blueMinusGreen = Avx2.Subtract(blue16, green16);
+        Vector256<short> blueMinusRed = Avx2.Subtract(blue16, red16);
+        Vector256<short> cmp1 = Avx2.CompareGreaterThan(blueMinusGreen, BlueThresholdVec);
+        Vector256<short> cmp2 = Avx2.CompareGreaterThan(blueMinusRed, BlueThresholdVec);
+        Vector256<short> cmpCombined1 = Avx2.And(cmp1, cmp2);
+                    
+        Vector256<short> cmpGreenLe = Avx2.CompareGreaterThan(GreenToleranceVec, green16);
+        Vector256<short> cmpRedLe = Avx2.CompareGreaterThan(RedToleranceVec, red16);
+        Vector256<short> cmpBlueGe = Avx2.CompareGreaterThan(blue16, BlueMinimumVec);
+                    
+        Vector256<short> cmpCombined2 = Avx2.And(Avx2.And(cmpGreenLe, cmpRedLe), cmpBlueGe);
+                    
+        Vector256<short> finalCmp = Avx2.Or(cmpCombined1, cmpCombined2);
+        
+        return !Avx.TestZ(finalCmp, finalCmp);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     private static bool IsBlue(byte red, byte green, byte blue)
     {
-        return green <= GreenTolerance && red <= RedTolerance && blue >= BlueMinimum || blue - green > BlueThreshold && blue - red > BlueThreshold;
+        return blue - green > BlueThreshold && blue - red > BlueThreshold ||
+               green <= GreenTolerance && red <= RedTolerance && blue >= BlueMinimum;
     }
 
     private static byte[] PreparePacket(short deltaX, short deltaY)
     {
-        return new[]
-        {
+        return
+        [
             (byte) (deltaX & 0xFF), (byte) (deltaX >> 8), (byte) (deltaY & 0xFF), (byte) (deltaY >> 8)
-        };
+        ];
     }
 }
 #pragma warning restore CA1416
