@@ -23,6 +23,10 @@ _Showcased using OBS with an overlapping debug window_
 * Playing long periods (_Alt tabbing? idk what causes this_) BattleBit causes GPU utilization to max; timings get thrown off everything is wack causing weird jitter within the Aimbot. This seems to be an independent issue with BattleBit itself. **You can fix it by setting fps to 30 and then back to your regular frame rate**, gpu utilization will go down.
 * Locks onto USA arm patches when on specific maps.
 
+## Requirements
+* CPU must have SSE4.2/AVX2 instruction set for SIMD-256 bit acceleration
+  * If acceleration is not present see [here](https://github.com/EthoIRL/TargetLock/tree/6dd86d36c963a64d6ac32bc474083d27cc8e9d88)
+
 ## Helious setup
 Make sure to point to your remote [Helious](https://github.com/StrateimTech/Helious) installation.
 By default the port is 7483.
