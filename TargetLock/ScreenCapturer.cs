@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Diagnostics;
+using System.Runtime.InteropServices;
 using SharpDX;
 using SharpDX.Direct3D11;
 using SharpDX.DXGI;
@@ -10,6 +11,8 @@ namespace TargetLock;
 #pragma warning disable CA1416
 public static class ScreenCapturer
 {
+    private static readonly Stopwatch CwWatch = new();
+    private static readonly List<long> TimingsCw = new(1000000);
     public static DataBox GpuImage;
     
     [DllImport("user32.dll", SetLastError = true)]
@@ -97,7 +100,20 @@ public static class ScreenCapturer
             
             deviceContext.CopySubresourceRegion(texturePtr, 0, resourceRegion, texture2D, 0);
 
+            CwWatch.Restart();
             Program.HandleImage();
+            CwWatch.Stop();
+            
+            if (!CwWatch.IsRunning)
+            {
+                TimingsCw.Add(CwWatch.ElapsedTicks);
+            }
+            
+            if (TimingsCw.Count != 0 && TimingsCw.Count % 100 == 0)
+            {
+                Console.WriteLine($"Timings CAL Avg: ({TimingsCw.Average() / 10000.0}, {TimingsCw.Count})");
+            }
+            
             screenResource.Dispose();
         }
     }

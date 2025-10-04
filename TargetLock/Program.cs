@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
@@ -61,12 +62,19 @@ class Program
         0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
         0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
         0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF);
+
+    public static Network Network = new Network();
     
     [SupportedOSPlatform("windows")]
     static void Main(string[] args)
     {
+        // Network.Train();
+        
         Socket.Connect(EndPoint);
-
+        Socket.SendBufferSize = 1500;
+        // Network.StartDataCapture();
+        Network.StartInference();
+        
         new Thread(() =>
         {
             while (true)
@@ -145,9 +153,54 @@ class Program
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     private static void HandleMovements(int offsetX, int offsetY)
     {
-        double deltaX = offsetX - CenterMouseX;
-        double deltaY = offsetY - CenterMouseY;
+        // if (Network.lastPositions.Size >= 5)
+        // {
+        //     var lastPositions = Network.lastPositions.ToArray();
+        //     
+        //     Network.Datas.Add(new Network.Data
+        //     {
+        //         current = new Network.Position
+        //         {
+        //             x = offsetX,
+        //             y = offsetY 
+        //         },
+        //         currentTime = DateTime.Now,
+        //         vx = lastPositions[0].x - offsetX,
+        //         vy = lastPositions[0].y - offsetY,
+        //         lastPostitons = lastPositions,
+        //         lastTimes = Network.lastTimes.ToArray()
+        //     });
+        // }
 
+        if (Network.lastPositions.Size <= 9)
+        {
+            Network.lastPositions.PushBack(new Network.Position
+            {
+                x = offsetX,
+                y = offsetY
+            });
+        
+            Network.lastTimes.PushBack(DateTime.Now);
+            return;
+        }
+        
+        var prediction = Network.Infer(new Network.Data
+        {
+            current = new Network.Position
+            {
+                x = offsetX,
+                y = offsetY
+            },
+            currentTime = DateTime.Now,
+            vx = Network.lastPositions[0].x - offsetX,
+            vy = Network.lastPositions[0].y - offsetY,
+            lastPostitons = Network.lastPositions.ToArray(),
+            lastTimes = Network.lastTimes.ToArray()
+        });
+        
+        double deltaX = offsetX - CenterMouseX + prediction.x;
+        double deltaY = offsetY - CenterMouseY + prediction.y;
+ 
         deltaX /= 2;
         deltaY /= 2;
 
@@ -179,6 +232,19 @@ class Program
 
         _globalX = deltaX;
         _globalY = deltaY;
+        Network.lastPositions.PushBack(new Network.Position
+        {
+            x = offsetX,
+            y = offsetY
+        });
+        
+        Network.lastTimes.PushBack(DateTime.Now);
+
+        if (Network.DataCapture && Network.Datas.Count % 250 == 0)
+        {
+            Console.WriteLine("Saving: " + Network.Datas.Count / 250);
+            Network.Save();
+        } 
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
@@ -204,7 +270,7 @@ class Program
                     
         Vector256<short> cmpCombined2 = Avx2.And(Avx2.And(cmpGreenLe, cmpRedLe), cmpBlueGe);
                     
-        Vector256<short> finalCmp = Avx2.Or(cmpCombined1, cmpCombined2);
+        Vector256<short> finalCmp = Avx2.And(cmpCombined1, cmpCombined2);
         
         return !Avx.TestZ(finalCmp, finalCmp);
     }
