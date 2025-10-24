@@ -7,11 +7,11 @@ public class Prediction
     private readonly CircularBuffer<(double, double)> _positions;
     private readonly CircularBuffer<(double, double)> _predictions;
 
-    private readonly int _future;
+    private readonly double _interp;
 
-    public Prediction(int prediction, int trackedStates)
+    public Prediction(double interp, int trackedStates)
     {
-        _future = prediction;
+        _interp = interp;
         _positions = new(trackedStates);
         _predictions = new(trackedStates);
     }
@@ -32,12 +32,11 @@ public class Prediction
             relativeX -= predX;
             relativeY -= predY;
         }
-        var offset = 1.5;
         
         AddPrediction(relativeX, relativeY);
         
-        double predictedX = deltaX + relativeX * offset;
-        double predictedY = deltaY + relativeY * offset;
+        double predictedX = deltaX + relativeX * _interp;
+        double predictedY = deltaY + relativeY * _interp;
         
         return (predictedX, predictedY);
     }
