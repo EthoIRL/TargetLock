@@ -146,7 +146,7 @@ class Program
     private static void HandleMovements(int offsetX, int offsetY)
     {
         double deltaX = offsetX - CenterMouseX;
-        double deltaY = offsetY - CenterMouseY;
+        double deltaY = offsetY + 1 - CenterMouseY;
         
         if (UsePrediction)
         {
