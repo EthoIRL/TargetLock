@@ -28,7 +28,7 @@ class Program
     private const byte BlueThreshold = 175;
 
     private static readonly bool UsePrediction = false;
-    private static readonly Prediction Predictor = new(1.2, 9);
+    private static readonly Prediction Predictor = new(10, 9);
 
     private static readonly int StridePixels = Resolution.width * 4;
 
@@ -61,7 +61,7 @@ class Program
         0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
         0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
         0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF);
-    
+
     [SupportedOSPlatform("windows")]
     static void Main(string[] args)
     {
@@ -147,9 +147,16 @@ class Program
     {
         double deltaX = offsetX - CenterMouseX;
         double deltaY = offsetY - CenterMouseY;
+        
+        if (UsePrediction)
+        {
+            var predictions = Predictor.HandlePredictions(deltaX, deltaY);
 
-        deltaX /= 2;
-        deltaY /= 2;
+            Predictor.AddPosition(deltaX, deltaY);
+
+            deltaX = predictions.deltaX;
+            deltaY = predictions.deltaY;
+        }
 
         if (Slowdown)
         {
@@ -164,18 +171,6 @@ class Program
             }
         }
 
-        if (UsePrediction)
-        {
-            if (Math.Abs(deltaX) > 50 || Math.Abs(deltaY) > 50)
-            {
-                Predictor.Reset();
-            }
-
-            var predictions = Predictor.HandlePredictions(deltaX, deltaY);
-
-            deltaX = predictions.deltaX;
-            deltaY = predictions.deltaY;
-        }
 
         _globalX = deltaX;
         _globalY = deltaY;

@@ -4,108 +4,76 @@ namespace TargetLock;
 
 public class Prediction
 {
-    private readonly CircularBuffer<double> _x;
-    private readonly CircularBuffer<double> _y;
+    private readonly CircularBuffer<(double, double)> _positions;
+    private readonly CircularBuffer<(double, double)> _predictions;
 
-    private bool _hasMouseStates;
+    private readonly int _future;
 
-    private readonly double _correction;
-
-    public Prediction(double correction, int trackedStates)
+    public Prediction(int prediction, int trackedStates)
     {
-        _correction = correction;
-        _y = new(trackedStates);
-        _x = new(trackedStates);
+        _future = prediction;
+        _positions = new(trackedStates);
+        _predictions = new(trackedStates);
     }
-
-    private int _totalPredictions;
     
     public (double deltaX, double deltaY) HandlePredictions(double deltaX, double deltaY)
     {
-        if (!_hasMouseStates)
+        if (_positions.Size < 2)
         {
-            if (_totalPredictions >= 9)
-            {
-                _hasMouseStates = true;
-            }
-            
-            _totalPredictions++;
+            return (deltaX, deltaY);
         }
-
-        _x.PushFront(deltaX);
-        _y.PushFront(deltaY);
         
-        if (_hasMouseStates)
+        var (relativeX, relativeY) = SmoothedVelocity();
+        
+        if (_predictions.Size > 1)
         {
-            var xAverage = _x.Average();
-            var yAverage = _y.Average();
-
-            var overCorrectedX = !SameSign(_x, 3, deltaX);
-            var overCorrectedY = !SameSign(_y, 3, deltaY);
-
-            var predictionX = xAverage * (overCorrectedX ? -_correction : _correction);
-            var predictionY = yAverage * (overCorrectedY ? -_correction : _correction);
-
-            if (overCorrectedX)
-            {
-                predictionX = deltaX;
-            }
-
-            if (overCorrectedY)
-            {
-                predictionY = deltaY;
-            }
-
-            if (deltaX == 0)
-            {
-                predictionX = 0;
-            }
-
-            if (deltaY == 0)
-            {
-                predictionY = 0;
-            }
-
-            return (predictionX, predictionY);
+            var (predX, predY) = _predictions[0];
+        
+            relativeX -= predX;
+            relativeY -= predY;
         }
-
-        return (deltaX, deltaY);
-    }
-
-    private bool SameSign(IEnumerable<double> values, int length, double value, int offset = 0)
-    {
-        int i = 0;
-        foreach (var internalValue in values)
-        {
-            if (offset > 0 && i < offset)
-            {
-                i++;
-
-                continue;
-            }
-
-            if (internalValue > 0 != value > 0)
-            {
-                return false;
-            } 
-
-            i++;
-
-            if (i >= offset + length)
-            {
-                break;
-            }
-        }
-
-        return true;
+        var offset = 1.5;
+        
+        AddPrediction(relativeX, relativeY);
+        
+        double predictedX = deltaX + relativeX * offset;
+        double predictedY = deltaY + relativeY * offset;
+        
+        return (predictedX, predictedY);
     }
 
     public void Reset()
     {
-        _x.Clear();
-        _y.Clear();
-        
-        _totalPredictions = 0;
-        _hasMouseStates = false;
+        if (_positions.IsEmpty)
+        {
+            _positions.Clear();
+            _predictions.Clear();
+        }   
+    }
+
+    public void AddPosition(double x, double y)
+    {
+        _positions.PushFront((x, y));
+    }
+
+    private void AddPrediction(double x, double y)
+    {
+        _predictions.PushFront((x, y));
+    }
+    
+    private (double x, double y) SmoothedVelocity()
+    {
+        int count = Math.Min(_positions.Size - 1, 9);
+        double sumX = 0, sumY = 0;
+
+        for (int i = 0; i < count; i++)
+        {
+            var (currX, currY) = _positions[i];
+            var (prevX, prevY) = _positions[i + 1];
+            sumX += currX - prevX;
+            sumY += currY - prevY;
+        }
+
+        return (sumX / count, sumY / count);
     }
 }
