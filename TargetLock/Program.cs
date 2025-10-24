@@ -35,6 +35,13 @@ class Program
     private static readonly Socket Socket = new(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
     private static readonly IPAddress Broadcast = IPAddress.Parse("192.168.68.68");
     private static readonly IPEndPoint EndPoint = new(Broadcast, 7483);
+    
+    // PD Controller adjust to liking (Smoothness v. Jitter)
+    private const double Kp = 0.7;
+    private const double Kd = 0.3;
+    
+    private static double _lastErrorX;
+    private static double _lastErrorY;
 
     private static double _globalX;
     private static double _globalY;
@@ -157,6 +164,12 @@ class Program
             deltaX = predictions.deltaX;
             deltaY = predictions.deltaY;
         }
+        
+        double dErrorX = deltaX - _lastErrorX;
+        double dErrorY = deltaY - _lastErrorY;
+        
+        double moveX = Kp * deltaX + Kd * dErrorX;
+        double moveY = Kp * deltaY + Kd * dErrorY;
 
         if (Slowdown)
         {
@@ -171,9 +184,11 @@ class Program
             }
         }
 
-
-        _globalX = deltaX;
-        _globalY = deltaY;
+        _globalX = moveX;
+        _globalY = moveY;
+        
+        _lastErrorX = deltaX;
+        _lastErrorY = deltaY;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
