@@ -28,13 +28,20 @@ class Program
     private const byte BlueThreshold = 175;
 
     private static readonly bool UsePrediction = false;
-    private static readonly Prediction Predictor = new(1.2, 9);
+    private static readonly Prediction Predictor = new(1.5, 9);
 
     private static readonly int StridePixels = Resolution.width * 4;
 
     private static readonly Socket Socket = new(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
     private static readonly IPAddress Broadcast = IPAddress.Parse("192.168.68.68");
     private static readonly IPEndPoint EndPoint = new(Broadcast, 7483);
+    
+    // PD Controller adjust to liking (Smoothness v. Jitter)
+    private const double Kp = 0.7;
+    private const double Kd = 0.3;
+    
+    private static double _lastErrorX;
+    private static double _lastErrorY;
 
     private static double _globalX;
     private static double _globalY;
@@ -61,7 +68,7 @@ class Program
         0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
         0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
         0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF);
-    
+
     [SupportedOSPlatform("windows")]
     static void Main(string[] args)
     {
@@ -146,10 +153,23 @@ class Program
     private static void HandleMovements(int offsetX, int offsetY)
     {
         double deltaX = offsetX - CenterMouseX;
-        double deltaY = offsetY - CenterMouseY;
+        double deltaY = offsetY + 1 - CenterMouseY;
+        
+        if (UsePrediction)
+        {
+            var predictions = Predictor.HandlePredictions(deltaX, deltaY);
 
-        deltaX /= 2;
-        deltaY /= 2;
+            Predictor.AddPosition(deltaX, deltaY);
+
+            deltaX = predictions.deltaX;
+            deltaY = predictions.deltaY;
+        }
+        
+        double dErrorX = deltaX - _lastErrorX;
+        double dErrorY = deltaY - _lastErrorY;
+        
+        double moveX = Kp * deltaX + Kd * dErrorX;
+        double moveY = Kp * deltaY + Kd * dErrorY;
 
         if (Slowdown)
         {
@@ -164,21 +184,11 @@ class Program
             }
         }
 
-        if (UsePrediction)
-        {
-            if (Math.Abs(deltaX) > 50 || Math.Abs(deltaY) > 50)
-            {
-                Predictor.Reset();
-            }
-
-            var predictions = Predictor.HandlePredictions(deltaX, deltaY);
-
-            deltaX = predictions.deltaX;
-            deltaY = predictions.deltaY;
-        }
-
-        _globalX = deltaX;
-        _globalY = deltaY;
+        _globalX = moveX;
+        _globalY = moveY;
+        
+        _lastErrorX = deltaX;
+        _lastErrorY = deltaY;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
