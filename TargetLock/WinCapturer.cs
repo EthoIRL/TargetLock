@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Diagnostics;
+using System.Runtime.InteropServices;
 using SharpDX;
 using SharpDX.Direct3D11;
 using SharpDX.DXGI;
@@ -8,7 +9,7 @@ using MapFlags = SharpDX.Direct3D11.MapFlags;
 namespace TargetLock;
 
 #pragma warning disable CA1416
-public static class ScreenCapturer
+public static class WinCapturer
 {
     public static DataBox GpuImage;
     
@@ -25,6 +26,7 @@ public static class ScreenCapturer
 
     public static void StartCapture(Int32 adapterIndex, Int32 displayIndex, int outputWidth, int outputHeight)
     {
+        Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.High;
         SetProcessDpiAwarenessContext((int)DPI_AWARENESS_CONTEXT.DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 
         var factory = new Factory1();

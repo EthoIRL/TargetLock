@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using System.Net;
+﻿using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
@@ -86,8 +85,8 @@ class Program
                 }
             }
         }).Start();
-        Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.High;
-        ScreenCapturer.StartCapture(0, 0, Resolution.width, Resolution.height);
+        
+        // WinCapturer.StartCapture(0, 0, Resolution.width, Resolution.height);
     }
 
     private const int HeightStep = 5;
@@ -99,7 +98,7 @@ class Program
         {
             for (int y = Resolution.height - 1; y >= 0; y -= HeightStep)
             {
-                byte* currentLine = (byte*)(ScreenCapturer.GpuImage.DataPointer + y * ScreenCapturer.GpuImage.RowPitch);
+                byte* currentLine = (byte*)(WinCapturer.GpuImage.DataPointer + y * WinCapturer.GpuImage.RowPitch);
                 
                 for (int x = 0; x <= StridePixels - 32; x += 32)
                 {
@@ -112,7 +111,7 @@ class Program
 
                     for (int i = HeightStep; i >= 0; i--)
                     {
-                        byte* offsetLine = currentLine + i * ScreenCapturer.GpuImage.RowPitch;
+                        byte* offsetLine = currentLine + i * WinCapturer.GpuImage.RowPitch;
                         
                         for (int x2 = 0; x2 <= StridePixels - 32; x2 += 32)
                         {
