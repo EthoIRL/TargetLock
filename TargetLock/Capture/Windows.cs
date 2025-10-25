@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using SharpDX;
 using SharpDX.Direct3D11;
@@ -6,12 +6,15 @@ using SharpDX.DXGI;
 using Device = SharpDX.Direct3D11.Device;
 using MapFlags = SharpDX.Direct3D11.MapFlags;
 
-namespace TargetLock;
+namespace TargetLock.Capture;
 
 #pragma warning disable CA1416
-public static class WinCapturer
+public class Windows(int outputWidth, int outputHeight) : GenericCapturer(outputWidth, outputHeight)
 {
     public static DataBox GpuImage;
+ 
+    private const int AdapterIndex = 0;
+    private const int DisplayIndex = 0;
     
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool SetProcessDpiAwarenessContext(int dpiFlag);
@@ -23,15 +26,15 @@ public static class WinCapturer
         DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE = 18,
         DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 = 34
     }
-
-    public static void StartCapture(Int32 adapterIndex, Int32 displayIndex, int outputWidth, int outputHeight)
+    
+    public override void StartCapture()
     {
         Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.High;
         SetProcessDpiAwarenessContext((int)DPI_AWARENESS_CONTEXT.DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 
         var factory = new Factory1();
-        var adapter = factory.GetAdapter1(adapterIndex);
-        var output = adapter.GetOutput(displayIndex);
+        var adapter = factory.GetAdapter1(AdapterIndex);
+        var output = adapter.GetOutput(DisplayIndex);
 
         Output5 output5 = output.QueryInterface<Output5>();
         
@@ -41,16 +44,16 @@ public static class WinCapturer
         Int32 width = output5.Description.DesktopBounds.Right - output5.Description.DesktopBounds.Left;
         Int32 height = output5.Description.DesktopBounds.Bottom - output5.Description.DesktopBounds.Top;
 
-        int centerWidth = width / 2 - outputWidth / 2;
-        int centerHeight = height / 2 - outputHeight / 2;
+        int centerWidth = width / 2 - OutputWidth / 2;
+        int centerHeight = height / 2 - OutputHeight / 2;
 
         Texture2DDescription texture2DDescription = new Texture2DDescription
         {
             CpuAccessFlags = CpuAccessFlags.Read,
             BindFlags = BindFlags.None,
             Format = Format.B8G8R8A8_UNorm,
-            Width = outputWidth,
-            Height = outputHeight,
+            Width = OutputWidth,
+            Height = OutputHeight,
             OptionFlags = ResourceOptionFlags.None,
             MipLevels = 0,
             ArraySize = 1,
@@ -67,7 +70,7 @@ public static class WinCapturer
 
         GpuImage = deviceContext.MapSubresource(texture2D, 0, MapMode.Read, MapFlags.None);
 
-        ResourceRegion resourceRegion = new ResourceRegion(centerWidth, centerHeight, 0, centerWidth + outputWidth, centerHeight + outputHeight, 1);
+        ResourceRegion resourceRegion = new ResourceRegion(centerWidth, centerHeight, 0, centerWidth + OutputWidth, centerHeight + OutputHeight, 1);
         
         bool previousState = false;
 
