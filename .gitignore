@@ -1,11 +1,4 @@
-bin
-obj
-publish
-libs
+target
 
-# Rid1er
+# Jetbrains
 .idea
-TargetLock.sln.DotSettings.user
-
-*.DotSettings
-global.json
