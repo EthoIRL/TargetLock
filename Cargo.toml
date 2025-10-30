@@ -4,3 +4,5 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+hyprland-preview-share-picker-lib = { git = "https://github.com/WhySoBad/hyprland-preview-share-picker" }
+wayland-client = "0.31.11"
