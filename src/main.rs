@@ -34,7 +34,7 @@ fn main() {
     loop {
         let buffer = output_manager.capture_output_region(&wl_output, display_center_x - WIDTH / 2, display_center_y - HEIGHT / 2, WIDTH, HEIGHT).unwrap();
 
-        let xrgb_image = match Image::new(buffer).unwrap().buffer {
+        let xbgr_image = match Image::new(buffer).unwrap().buffer {
             ImageKind::Xrgb(image_buffer) => image_buffer,
             ImageKind::Rgb(_) => unreachable!("rgb"),
         };
@@ -51,7 +51,7 @@ fn main() {
                     break;
                 }
                 
-                let pixel = xrgb_image.get_pixel(x as u32, y as u32).0;
+                let pixel = xbgr_image.get_pixel(x as u32, y as u32).0;
 
                 if is_pink(&pixel) {
                     for local_y in (0..HEIGHT_SKIP).rev() {
@@ -61,7 +61,7 @@ fn main() {
                             continue;
                         } 
                         
-                        let local_pixel = xrgb_image.get_pixel(x as u32, y as u32).0;
+                        let local_pixel = xbgr_image.get_pixel(x as u32, y as u32).0;
         
                         if is_pink(&local_pixel) {
                             handle_movement(x, y, &mut last_error_x, &mut last_error_y, &socket, &endpoint);
