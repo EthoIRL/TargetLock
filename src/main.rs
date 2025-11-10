@@ -28,7 +28,6 @@ const HELIOUS_IP: Ipv4Addr = Ipv4Addr::new(192, 168, 68, 68);
 const HELIOUS_PORT: u16 = 7483;
 
 fn main() {
-    let socket = UdpSocket::bind("0.0.0.0:0").expect("Failed to bind to local socket!");
     let connection = Connection::connect_to_env().expect("Failed to connect to a wayland session!");
 
     let mut output_manager = OutputManager::new(&connection).expect("Failed to create output capturing manager!");
@@ -37,7 +36,9 @@ fn main() {
     println!("{:#?}", wl_output);
     println!("{:#?}", display);
 
+    let socket = UdpSocket::bind("0.0.0.0:0").expect("Failed to bind to local socket!");
     let endpoint = SocketAddrV4::new(HELIOUS_IP, HELIOUS_PORT);
+    socket.connect(endpoint).expect("Failed to connect to remote mouse handler!");
 
     let display_mode = display.mode.expect("Failed to get display mode & geometry!");
 
@@ -80,7 +81,7 @@ fn main() {
                         let local_pixel = xbgr_image.get_pixel(x as u32, y as u32).0;
         
                         if is_pink(&local_pixel) {
-                            handle_movement(x, y, &mut last_error_x, &mut last_error_y, &socket, &endpoint);
+                            handle_movement(x, y, &mut last_error_x, &mut last_error_y, &socket);
         
                             found = true;
                             break;
@@ -92,7 +93,7 @@ fn main() {
     }
 }
 
-fn handle_movement(offset_x: i32, offset_y: i32, last_error_x: &mut f32, last_error_y: &mut f32, socket: &UdpSocket, endpoint: &SocketAddrV4) {
+fn handle_movement(offset_x: i32, offset_y: i32, last_error_x: &mut f32, last_error_y: &mut f32, socket: &UdpSocket) {
     let delta_x = (WIDTH as f32 / 2.0) - offset_x as f32;
     let delta_y = (HEIGHT as f32 / 2.0) - offset_y as f32 - 1.0;
 
@@ -103,7 +104,7 @@ fn handle_movement(offset_x: i32, offset_y: i32, last_error_x: &mut f32, last_er
     let move_y = KP * delta_y + KD * d_error_y;
 
     let packet = prepare_packet(-f32::round(move_x) as i16, -f32::round(move_y) as i16);
-    socket.send_to(&packet, endpoint).unwrap();
+    socket.send(&packet).unwrap();
 
     *last_error_x = delta_x;
     *last_error_y = delta_y;
