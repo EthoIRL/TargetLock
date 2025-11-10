@@ -56,25 +56,15 @@ fn main() {
             ImageKind::Rgb(_) => unreachable!("Please don't use RGB!"),
         };
 
-        let mut found = false;
-
-        for y in (0..HEIGHT).rev().step_by(HEIGHT_SKIP) {
-            if found {
-                break;
-            }
-        
+        'search_loop: for y in (0..HEIGHT).rev().step_by(HEIGHT_SKIP) {
             for x in 0..WIDTH {
-                if found {
-                    break;
-                }
-                
                 let pixel = xbgr_image.get_pixel(x as u32, y as u32).0;
 
                 if is_pink(&pixel) {
                     for local_y in (0..HEIGHT_SKIP).rev() {
                         let y = y + local_y as i32;
                         
-                        if y > HEIGHT {
+                        if y >= HEIGHT {
                             continue;
                         } 
                         
@@ -82,9 +72,7 @@ fn main() {
         
                         if is_pink(&local_pixel) {
                             handle_movement(x, y, &mut last_error_x, &mut last_error_y, &socket);
-        
-                            found = true;
-                            break;
+                            break 'search_loop;
                         }
                     }
                 }
