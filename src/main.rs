@@ -14,8 +14,18 @@ const HEIGHT: i32 = 300;
 /// OTHER: Depending on a game's color indicator this can be larger/smaller or disabled.
 const HEIGHT_SKIP: usize = 5;
 
+// PD Controller constants 
 const KP: f32 = 0.7;
 const KD: f32 = 0.3;
+
+/// NOTE: PINK Color threshold
+const RED_THRESHOLD: u8 = 180;
+const GREEN_THRESHOLD: u8 = 100;
+const BLUE_THRESHOLD: u8 = 200;
+
+/// NOTE: Assuming Helious-rs as remote system, use your own ip, and port.
+const HELIOUS_IP: Ipv4Addr = Ipv4Addr::new(192, 168, 68, 68);
+const HELIOUS_PORT: u16 = 7483;
 
 fn main() {
     let socket = UdpSocket::bind("0.0.0.0:0").expect("Failed to bind to local socket!");
@@ -27,8 +37,7 @@ fn main() {
     println!("{:#?}", wl_output);
     println!("{:#?}", display);
 
-    let broadcast_addr = Ipv4Addr::new(192, 168, 68, 68);
-    let endpoint = SocketAddrV4::new(broadcast_addr, 7483);
+    let endpoint = SocketAddrV4::new(HELIOUS_IP, HELIOUS_PORT);
 
     let display_mode = display.mode.expect("Failed to get display mode & geometry!");
 
@@ -43,7 +52,7 @@ fn main() {
 
         let xbgr_image = match Image::new(buffer).unwrap().buffer {
             ImageKind::Xrgb(image_buffer) => image_buffer,
-            ImageKind::Rgb(_) => unreachable!("rgb"),
+            ImageKind::Rgb(_) => unreachable!("Please don't use RGB!"),
         };
 
         let mut found = false;
@@ -102,7 +111,7 @@ fn handle_movement(offset_x: i32, offset_y: i32, last_error_x: &mut f32, last_er
 
 /// Assumes BGRX format
 fn is_pink(pixel: &[u8; 4]) -> bool {
-    pixel[0] > 200 && pixel[2] > 180 && pixel[1] < 100
+    pixel[0] > BLUE_THRESHOLD && pixel[2] > RED_THRESHOLD && pixel[1] < GREEN_THRESHOLD
 }
 
 fn prepare_packet(delta_x: i16, delta_y: i16) -> [u8; 4] {
