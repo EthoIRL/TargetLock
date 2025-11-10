@@ -5,6 +5,13 @@ use wayland_client::Connection;
 
 const WIDTH: i32 = 300;
 const HEIGHT: i32 = 300;
+
+/// NOTE: BattleBit Specific:
+/// Performs color calculations every 5y pixels.
+/// This saves around 80% of the calculation while maintaining full accurate search.
+/// 300 Lines -> 60 Lines (-80%)
+/// 
+/// OTHER: Depending on a game's color indicator this can be larger/smaller or disabled.
 const HEIGHT_SKIP: usize = 5;
 
 const KP: f32 = 0.7;
